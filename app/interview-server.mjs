@@ -596,8 +596,8 @@ function styles() {
   --accent-strong: #115e59;
   --danger: #b42318;
 }
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
+*:not(#sessionContainer *) { box-sizing: border-box; }
+[hidden]:not(#sessionContainer [hidden]) { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -634,7 +634,7 @@ body {
   color: white;
   font-weight: 800;
 }
-h1, h2, p { margin: 0; }
+h1:not(#sessionContainer h1), h2:not(#sessionContainer h2), p:not(#sessionContainer p) { margin: 0; }
 h1 { font-size: 24px; }
 h2 { font-size: 16px; }
 p, .subtle { color: var(--muted); }
@@ -643,16 +643,16 @@ p, .subtle { color: var(--muted); }
   gap: 14px;
   margin-top: 24px;
 }
-label {
+label:not(#sessionContainer label) {
   display: grid;
   gap: 6px;
   font-size: 13px;
   color: var(--muted);
 }
-input, select, button {
+input:not(#sessionContainer input), select:not(#sessionContainer select), button:not(#sessionContainer button) {
   font: inherit;
 }
-input, select {
+input:not(#sessionContainer input), select:not(#sessionContainer select) {
   width: 100%;
   min-height: 40px;
   border: 1px solid var(--line);
@@ -661,7 +661,7 @@ input, select {
   background: #fff;
   color: var(--text);
 }
-button {
+button:not(#sessionContainer button) {
   min-height: 38px;
   border: 0;
   border-radius: 6px;
@@ -669,7 +669,7 @@ button {
   cursor: pointer;
   white-space: nowrap;
 }
-button:disabled {
+button:disabled:not(#sessionContainer button:disabled) {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -905,6 +905,9 @@ body.zoom-enabled .interviewer-col-handle {
 .zoom-container {
   min-height: 0;
   width: 100%;
+}
+#sessionContainer * {
+  all: revert;
 }
 .zoom-overlay {
   position: fixed;
@@ -1348,7 +1351,10 @@ function loadZoomToolkit(version) {
     zoomAssetsPromise = Promise.all([
       loadStyle("https://source.zoom.us/uitoolkit/" + version + "/videosdk-ui-toolkit.css"),
       window.UIToolkit ? Promise.resolve() : loadScript("https://source.zoom.us/uitoolkit/" + version + "/videosdk-ui-toolkit.min.umd.js"),
-    ]);
+    ]).catch(function(err) {
+      zoomAssetsPromise = null;
+      throw err;
+    });
   }
   return zoomAssetsPromise;
 }
@@ -1397,17 +1403,26 @@ async function joinZoom() {
       sessionName: zoom.sessionName,
       userName: zoom.userName,
       sessionPasscode: zoom.sessionPasscode,
+      featuresOptions: ["video", "audio", "share", "chat", "users", "settings"],
     };
     uitoolkit.joinSession(sessionContainer, config);
     zoomJoined = true;
+    var onClosed = function() {
+      zoomJoined = false;
+      if (zoomOverlay) {
+        zoomOverlay.hidden = true;
+      }
+      if (sessionState) {
+        updateZoomControls(sessionState);
+      }
+    };
     if (typeof uitoolkit.onSessionClosed === "function") {
-      uitoolkit.onSessionClosed(() => {
-        zoomJoined = false;
-        if (zoomOverlay) {
-          zoomOverlay.hidden = true;
-        }
-        if (sessionState) {
-          updateZoomControls(sessionState);
+      uitoolkit.onSessionClosed(onClosed);
+    }
+    if (typeof uitoolkit.onSessionDestroyed === "function") {
+      uitoolkit.onSessionDestroyed(function() {
+        if (typeof uitoolkit.destroy === "function") {
+          uitoolkit.destroy();
         }
       });
     }
