@@ -87,11 +87,13 @@ To enable Zoom Video SDK for the POC, add these repository secrets:
 
 Optional repository variable:
 
-- `ZOOM_UI_TOOLKIT_VERSION`: defaults to `2.2.0-2`.
+- `ZOOM_UI_TOOLKIT_VERSION`: defaults to `2.4.0-1`.
 
 The app generates Video SDK JWTs server-side inside the GitHub Actions runner.
 The Zoom secret is never sent to the browser. The display name entered in the
-room is passed to Zoom as the participant `userName`.
+room is passed to Zoom as the participant `userName`. Interviewers join Zoom
+first and can then invite the candidate from the room UI; candidates only see
+the Zoom join prompt after that invite.
 
 ## Architecture Notes
 

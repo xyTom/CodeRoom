@@ -17,7 +17,7 @@ const ZOOM_VIDEO_SDK_KEY = process.env.ZOOM_VIDEO_SDK_KEY || "";
 const ZOOM_VIDEO_SDK_SECRET = process.env.ZOOM_VIDEO_SDK_SECRET || "";
 const ZOOM_SESSION_NAME = process.env.ZOOM_SESSION_NAME || SESSION_NAME;
 const ZOOM_SESSION_PASSCODE = process.env.ZOOM_SESSION_PASSCODE || "";
-const ZOOM_UI_TOOLKIT_VERSION = process.env.ZOOM_UI_TOOLKIT_VERSION || "2.2.0-2";
+const ZOOM_UI_TOOLKIT_VERSION = process.env.ZOOM_UI_TOOLKIT_VERSION || "2.4.0-1";
 
 const COOKIE_NAME = "coderoom_token";
 const NAME_COOKIE_NAME = "coderoom_name";
@@ -31,6 +31,8 @@ const roomState = {
   admittedAt: null,
   candidateNames: new Set(),
   interviewerNames: new Set(),
+  zoomInviteAt: null,
+  zoomInviteBy: "",
 };
 
 function timingSafeEqual(a, b) {
@@ -123,6 +125,8 @@ function serializeRoomState() {
     admittedAt: roomState.admittedAt,
     candidateNames: Array.from(roomState.candidateNames),
     interviewerNames: Array.from(roomState.interviewerNames),
+    zoomInviteAt: roomState.zoomInviteAt,
+    zoomInviteBy: roomState.zoomInviteBy,
   };
 }
 
@@ -450,6 +454,19 @@ function renderRoomShell(bodyClass, mainMarkup, scriptMarkup = `<script>${client
 
     ${mainMarkup}
   </div>
+  <div id="zoomOverlay" class="zoom-overlay" hidden>
+    <div class="zoom-floating-window" role="dialog" aria-label="Zoom call">
+      <div class="zoom-window-bar">
+        <strong>Zoom</strong>
+        <button id="closeZoomButton" class="secondary icon-button" type="button" title="Hide Zoom" aria-label="Hide Zoom">&#215;</button>
+      </div>
+      <div id="sessionContainer" class="zoom-container"></div>
+    </div>
+  </div>
+  <div id="zoomInviteBanner" class="zoom-invite-banner" hidden>
+    <span id="zoomInviteText">The interviewer invited you to join Zoom.</span>
+    <button id="joinZoomFromInviteButton" class="primary" type="button">Join</button>
+  </div>
   ${scriptMarkup}
 </body>
 </html>`;
@@ -492,10 +509,11 @@ function renderCandidateRoom() {
         <section class="panel video-panel">
           <div class="panel-heading">
             <h2>Call</h2>
-            <button id="joinZoomButton" class="primary" type="button" disabled>Join Zoom</button>
+            <div class="call-actions">
+              <button id="joinZoomButton" class="primary icon-button" type="button" disabled title="Join Zoom" aria-label="Join Zoom">&#9658;</button>
+            </div>
           </div>
           <div id="zoomNotice" class="notice">Checking Zoom configuration...</div>
-          <div id="sessionContainer" class="zoom-container"></div>
         </section>
 
         <section class="panel chat-panel">
@@ -529,10 +547,12 @@ function renderInterviewerRoom() {
       <section class="panel video-panel">
         <div class="panel-heading">
           <h2>Call</h2>
-          <button id="joinZoomButton" class="primary" type="button" disabled>Join Zoom</button>
+          <div class="call-actions">
+            <button id="inviteZoomButton" class="secondary icon-button" type="button" disabled title="Invite candidate to Zoom" aria-label="Invite candidate to Zoom">&#8599;</button>
+            <button id="joinZoomButton" class="primary icon-button" type="button" disabled title="Join Zoom" aria-label="Join Zoom">&#9658;</button>
+          </div>
         </div>
         <div id="zoomNotice" class="notice">Checking Zoom configuration...</div>
-        <div id="sessionContainer" class="zoom-container"></div>
       </section>
       <div class="resize-handle horizontal interviewer-row-handle" data-resize="interviewer-top" title="Resize call and workspace"></div>
 
@@ -577,6 +597,7 @@ function styles() {
   --danger: #b42318;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -651,6 +672,21 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+.icon-button {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+.call-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .primary, .login-form button {
   background: var(--accent);
@@ -808,6 +844,22 @@ button:disabled {
   grid-column: auto;
   grid-row: auto;
 }
+body.zoom-enabled .chat-panel {
+  display: none;
+}
+body.zoom-enabled .candidate-dock {
+  grid-template-rows: minmax(160px, auto);
+  align-content: start;
+}
+body.zoom-enabled .interviewer-grid {
+  grid-template-rows: minmax(140px, var(--interviewer-top-height, 220px)) 8px minmax(280px, 1fr);
+}
+body.zoom-enabled .interviewer-workspace-panel {
+  grid-column: 1 / span 3;
+}
+body.zoom-enabled .interviewer-col-handle {
+  grid-row: 1;
+}
 .resize-handle {
   position: relative;
   border-radius: 6px;
@@ -853,6 +905,57 @@ button:disabled {
 .zoom-container {
   min-height: 0;
   width: 100%;
+}
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.48);
+}
+.zoom-floating-window {
+  width: min(1180px, calc(100vw - 40px));
+  height: min(760px, calc(100vh - 40px));
+  min-height: 420px;
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  overflow: hidden;
+  border: 1px solid #252c35;
+  border-radius: 8px;
+  background: #1f242b;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+}
+.zoom-window-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px 6px 14px;
+  color: white;
+  background: #111827;
+}
+.zoom-floating-window .zoom-container {
+  height: 100%;
+  background: #202124;
+}
+.zoom-invite-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 60;
+  width: min(520px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 16px 44px rgba(20, 30, 40, 0.18);
+  transform: translateX(-50%);
 }
 .messages {
   min-height: 0;
@@ -926,6 +1029,9 @@ button:disabled {
     grid-template-rows: 320px 360px;
     grid-column: 1;
   }
+  body.zoom-enabled .candidate-dock {
+    grid-template-rows: auto;
+  }
   .video-panel, .chat-panel, .workspace-panel {
     grid-column: 1;
     grid-row: auto;
@@ -941,6 +1047,11 @@ button:disabled {
   .candidate-workspace-panel {
     min-height: 70vh;
   }
+  .zoom-floating-window {
+    width: calc(100vw - 20px);
+    height: calc(100vh - 20px);
+    min-height: 0;
+  }
 }
 `;
 }
@@ -954,8 +1065,14 @@ const workspaceFrame = document.getElementById("workspaceFrame");
 const workspaceLoading = document.getElementById("workspaceLoading");
 const reloadWorkspace = document.getElementById("reloadWorkspace");
 const joinZoomButton = document.getElementById("joinZoomButton");
+const inviteZoomButton = document.getElementById("inviteZoomButton");
 const zoomNotice = document.getElementById("zoomNotice");
 const sessionContainer = document.getElementById("sessionContainer");
+const zoomOverlay = document.getElementById("zoomOverlay");
+const closeZoomButton = document.getElementById("closeZoomButton");
+const zoomInviteBanner = document.getElementById("zoomInviteBanner");
+const zoomInviteText = document.getElementById("zoomInviteText");
+const joinZoomFromInviteButton = document.getElementById("joinZoomFromInviteButton");
 const messagesEl = document.getElementById("messages");
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
@@ -965,6 +1082,9 @@ const admitCandidateButton = document.getElementById("admitCandidateButton");
 
 let sessionState = null;
 let workspaceLoaded = false;
+let zoomJoined = false;
+let zoomLoading = false;
+let zoomAssetsPromise = null;
 
 function setText(element, value) {
   if (element) {
@@ -1020,6 +1140,83 @@ function updateCandidateControls(state) {
   admitCandidateButton.disabled = true;
 }
 
+function canJoinZoom(state) {
+  if (!state?.zoom?.enabled) {
+    return false;
+  }
+  if (state.role === "candidate") {
+    return state.room.candidateAdmitted && Boolean(state.room.zoomInviteAt);
+  }
+  return true;
+}
+
+function updateZoomControls(state) {
+  const zoomEnabled = Boolean(state?.zoom?.enabled);
+  document.body.classList.toggle("zoom-enabled", zoomEnabled);
+
+  if (zoomInviteBanner) {
+    const showInvite = zoomEnabled && state?.role === "candidate" && Boolean(state.room.zoomInviteAt) && !zoomJoined;
+    zoomInviteBanner.hidden = !showInvite;
+    if (showInvite && zoomInviteText) {
+      const byline = state.room.zoomInviteBy ? " from " + state.room.zoomInviteBy : "";
+      zoomInviteText.textContent = "Zoom invite" + byline + ".";
+    }
+  }
+
+  if (!joinZoomButton && !zoomNotice && !inviteZoomButton) {
+    return;
+  }
+
+  if (!zoomEnabled) {
+    if (joinZoomButton) {
+      joinZoomButton.disabled = true;
+    }
+    if (inviteZoomButton) {
+      inviteZoomButton.disabled = true;
+    }
+    if (zoomNotice) {
+      zoomNotice.hidden = false;
+      zoomNotice.textContent = "Zoom is not configured. Add ZOOM_VIDEO_SDK_KEY and ZOOM_VIDEO_SDK_SECRET to enable video.";
+    }
+    return;
+  }
+
+  if (joinZoomButton) {
+    joinZoomButton.disabled = zoomLoading || !canJoinZoom(state);
+    joinZoomButton.title = zoomJoined ? "Show Zoom" : "Join Zoom";
+    joinZoomButton.setAttribute("aria-label", zoomJoined ? "Show Zoom" : "Join Zoom");
+  }
+
+  if (inviteZoomButton) {
+    const candidateReady = state.room.candidateAdmitted;
+    inviteZoomButton.disabled = zoomLoading || !zoomJoined || !candidateReady;
+  }
+
+  if (!zoomNotice) {
+    return;
+  }
+
+  zoomNotice.hidden = false;
+  if (state.role === "candidate") {
+    if (zoomJoined) {
+      zoomNotice.textContent = "Zoom is open in a floating window.";
+    } else if (state.room.zoomInviteAt) {
+      zoomNotice.textContent = "The interviewer invited you to join Zoom.";
+    } else {
+      zoomNotice.textContent = "Zoom will be available after the interviewer invites you.";
+    }
+    return;
+  }
+
+  if (zoomJoined && state.room.zoomInviteAt) {
+    zoomNotice.textContent = "Zoom is open. Candidate invitation sent.";
+  } else if (zoomJoined) {
+    zoomNotice.textContent = "Zoom is open. Invite the candidate when ready.";
+  } else {
+    zoomNotice.textContent = "Join Zoom first, then invite the candidate.";
+  }
+}
+
 async function loadSession() {
   const response = await fetch("/api/session", { cache: "no-store" });
   if (!response.ok) {
@@ -1045,15 +1242,7 @@ async function loadSession() {
     workspaceLoading.hidden = true;
   }
 
-  if (joinZoomButton && zoomNotice) {
-    if (sessionState.zoom.enabled) {
-      joinZoomButton.disabled = false;
-      zoomNotice.textContent = "Zoom Video SDK is configured. Join when ready.";
-    } else {
-      joinZoomButton.disabled = true;
-      zoomNotice.textContent = "Zoom is not configured. Add ZOOM_VIDEO_SDK_KEY and ZOOM_VIDEO_SDK_SECRET to enable video.";
-    }
-  }
+  updateZoomControls(sessionState);
 }
 
 async function loadMessages() {
@@ -1127,6 +1316,10 @@ if (admitCandidateButton) {
 
 function loadStyle(href) {
   return new Promise((resolve, reject) => {
+    if (document.querySelector('link[href="' + href + '"]')) {
+      resolve();
+      return;
+    }
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = href;
@@ -1138,6 +1331,10 @@ function loadStyle(href) {
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src="' + src + '"]')) {
+      resolve();
+      return;
+    }
     const script = document.createElement("script");
     script.src = src;
     script.onload = resolve;
@@ -1146,37 +1343,122 @@ function loadScript(src) {
   });
 }
 
-if (joinZoomButton) {
-  joinZoomButton.addEventListener("click", async () => {
-    joinZoomButton.disabled = true;
-    zoomNotice.textContent = "Loading Zoom UI Toolkit...";
-    try {
-      const response = await fetch("/api/zoom-session", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Zoom session is not configured");
-      }
-      const zoom = await response.json();
-      const version = zoom.uiToolkitVersion;
-      await loadStyle("https://source.zoom.us/uitoolkit/" + version + "/videosdk-ui-toolkit.css");
-      await loadScript("https://source.zoom.us/uitoolkit/" + version + "/videosdk-ui-toolkit.min.umd.js");
-      const uitoolkit = window.UIToolkit;
-      if (!uitoolkit) {
-        throw new Error("Zoom UI Toolkit did not load");
-      }
-      const config = {
-        videoSDKJWT: zoom.videoSDKJWT,
-        sessionName: zoom.sessionName,
-        userName: zoom.userName,
-        sessionPasscode: zoom.sessionPasscode,
-        featuresOptions: ["preview", "video", "audio", "share", "chat", "users", "settings", "leave"],
-      };
-      uitoolkit.joinSession(sessionContainer, config);
-      zoomNotice.hidden = true;
-    } catch (error) {
-      console.error(error);
+function loadZoomToolkit(version) {
+  if (!zoomAssetsPromise) {
+    zoomAssetsPromise = Promise.all([
+      loadStyle("https://source.zoom.us/uitoolkit/" + version + "/videosdk-ui-toolkit.css"),
+      window.UIToolkit ? Promise.resolve() : loadScript("https://source.zoom.us/uitoolkit/" + version + "/videosdk-ui-toolkit.min.umd.js"),
+    ]);
+  }
+  return zoomAssetsPromise;
+}
+
+async function joinZoom() {
+  if (!sessionState) {
+    await loadSession();
+  }
+  if (!canJoinZoom(sessionState)) {
+    updateZoomControls(sessionState);
+    return;
+  }
+  if (zoomJoined) {
+    if (zoomOverlay) {
+      zoomOverlay.hidden = false;
+    }
+    return;
+  }
+
+  zoomLoading = true;
+  updateZoomControls(sessionState);
+  if (zoomOverlay) {
+    zoomOverlay.hidden = false;
+  }
+  if (zoomNotice) {
+    zoomNotice.hidden = false;
+    zoomNotice.textContent = "Loading Zoom...";
+  }
+
+  try {
+    const response = await fetch("/api/zoom-session", { cache: "no-store" });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || "Zoom session is not available");
+    }
+    const zoom = await response.json();
+    const version = zoom.uiToolkitVersion;
+    await loadZoomToolkit(version);
+    const uitoolkit = window.UIToolkit;
+    if (!uitoolkit || !sessionContainer) {
+      throw new Error("Zoom UI Toolkit did not load");
+    }
+    sessionContainer.textContent = "";
+    const config = {
+      videoSDKJWT: zoom.videoSDKJWT,
+      sessionName: zoom.sessionName,
+      userName: zoom.userName,
+      sessionPasscode: zoom.sessionPasscode,
+    };
+    uitoolkit.joinSession(sessionContainer, config);
+    zoomJoined = true;
+    if (typeof uitoolkit.onSessionClosed === "function") {
+      uitoolkit.onSessionClosed(() => {
+        zoomJoined = false;
+        if (zoomOverlay) {
+          zoomOverlay.hidden = true;
+        }
+        if (sessionState) {
+          updateZoomControls(sessionState);
+        }
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    if (zoomOverlay) {
+      zoomOverlay.hidden = true;
+    }
+    if (zoomNotice) {
       zoomNotice.hidden = false;
       zoomNotice.textContent = "Could not start Zoom: " + error.message;
-      joinZoomButton.disabled = false;
+    }
+  } finally {
+    zoomLoading = false;
+    if (sessionState) {
+      updateZoomControls(sessionState);
+    }
+  }
+}
+
+if (joinZoomButton) {
+  joinZoomButton.addEventListener("click", joinZoom);
+}
+
+if (joinZoomFromInviteButton) {
+  joinZoomFromInviteButton.addEventListener("click", joinZoom);
+}
+
+if (closeZoomButton && zoomOverlay) {
+  closeZoomButton.addEventListener("click", () => {
+    zoomOverlay.hidden = true;
+  });
+}
+
+if (inviteZoomButton) {
+  inviteZoomButton.addEventListener("click", async () => {
+    inviteZoomButton.disabled = true;
+    try {
+      const response = await fetch("/api/invite-zoom", { method: "POST" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Could not send Zoom invite");
+      }
+      await loadSession();
+    } catch (error) {
+      console.error(error);
+      if (zoomNotice) {
+        zoomNotice.hidden = false;
+        zoomNotice.textContent = "Could not send Zoom invite: " + error.message;
+      }
+      updateZoomControls(sessionState);
     }
   });
 }
@@ -1424,9 +1706,30 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (url.pathname === "/api/invite-zoom" && req.method === "POST") {
+    if (session.role !== "interviewer") {
+      sendJson(res, 403, { error: "interviewer role required" });
+      return;
+    }
+    if (!ZOOM_VIDEO_SDK_KEY || !ZOOM_VIDEO_SDK_SECRET) {
+      sendJson(res, 404, { error: "Zoom Video SDK is not configured" });
+      return;
+    }
+    roomState.zoomInviteAt = new Date().toISOString();
+    roomState.zoomInviteBy = session.name || "Interviewer";
+    const room = serializeRoomState();
+    broadcast({ type: "room", room });
+    sendJson(res, 200, { room });
+    return;
+  }
+
   if (url.pathname === "/api/zoom-session") {
     if (session.role === "candidate" && !roomState.candidateAdmitted) {
       sendJson(res, 403, { error: "candidate is waiting for admission" });
+      return;
+    }
+    if (session.role === "candidate" && !roomState.zoomInviteAt) {
+      sendJson(res, 403, { error: "candidate is waiting for Zoom invite" });
       return;
     }
     const videoSDKJWT = signZoomJwt(session.role, session.token);
