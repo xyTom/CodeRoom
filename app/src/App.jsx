@@ -14,7 +14,6 @@ import { CandidateRoom, InterviewerRoom } from "./components/RoomLayouts.jsx";
 import { Topbar } from "./components/Topbar.jsx";
 import { ZoomInviteBanner } from "./components/ZoomInviteBanner.jsx";
 import { Spinner } from "@/components/ui/spinner";
-import { useResizableLayouts } from "./hooks/useResizableLayouts.js";
 import { loadZoomToolkit } from "./zoomToolkit.js";
 
 function canJoinZoom(session) {
@@ -66,8 +65,6 @@ export function App() {
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomError, setZoomError] = useState("");
   const zoomContainerRef = useRef(null);
-
-  useResizableLayouts();
 
   const refreshSession = useCallback(async () => {
     try {
@@ -217,8 +214,10 @@ export function App() {
 
   if (!session) {
     return (
-      <div className="coderoom-app flex min-h-full items-center justify-center gap-3 text-muted-foreground">
-        <div className="brand-mark">CR</div>
+      <div className="flex min-h-full items-center justify-center gap-3 text-muted-foreground">
+        <div className="grid size-10 place-items-center rounded-2xl bg-primary text-sm font-medium text-primary-foreground">
+          CR
+        </div>
         <Spinner />
         <span>Loading room...</span>
       </div>
@@ -233,8 +232,8 @@ export function App() {
     !zoomJoined;
 
   return (
-    <div className="coderoom-app">
-      <div className="shell">
+    <div className="h-full min-h-0 bg-muted/30">
+      <div className="grid h-screen min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
         <Topbar session={session} />
         {candidateWaiting ? (
           <CandidateLobby session={session} />

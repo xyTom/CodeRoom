@@ -4,8 +4,8 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 
 export function CandidateLobby({ session }) {
   return (
-    <main className="lobby-layout">
-      <Card className="lobby-card grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+    <main className="grid min-h-0 place-items-center p-4">
+      <Card className="min-h-60 w-full max-w-xl">
         <CardHeader>
           <CardTitle>Waiting room</CardTitle>
           <CardAction>

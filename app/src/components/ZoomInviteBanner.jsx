@@ -9,7 +9,7 @@ export function ZoomInviteBanner({ show, invitedBy, onJoin }) {
   }
 
   return (
-    <Alert className="zoom-invite-banner">
+    <Alert className="fixed bottom-5 right-5 z-[70] flex w-[min(26.25rem,calc(100vw-2rem))] items-center justify-between gap-3 bg-card shadow-xl">
       <AlertDescription>Zoom invite{invitedBy ? ` from ${invitedBy}` : ""}.</AlertDescription>
       <Button type="button" onClick={onJoin}>
         <Video data-icon="inline-start" />

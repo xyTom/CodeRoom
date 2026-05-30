@@ -1,63 +1,111 @@
-import * as React from "react";
+import * as React from "react"
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    data-slot="card"
-    className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)}
-    {...props}
-  />
-));
-Card.displayName = "Card";
+function Card({
+  className,
+  size = "default",
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card"
+      data-size={size}
+      className={cn(
+        "group/card flex flex-col gap-5 overflow-hidden rounded-[min(var(--radius-4xl),24px)] bg-card py-5 text-sm text-card-foreground shadow-sm ring-1 ring-foreground/5 has-[>img:first-child]:pt-0 data-[size=sm]:gap-4 data-[size=sm]:py-4 dark:ring-foreground/10 *:[img:first-child]:rounded-t-[min(var(--radius-4xl),24px)] *:[img:last-child]:rounded-b-[min(var(--radius-4xl),24px)]",
+        className
+      )}
+      {...props} />
+  );
+}
 
-const CardHeader = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    data-slot="card-header"
-    className={cn(
-      "grid auto-rows-min grid-cols-[1fr_auto] items-start gap-x-4 gap-y-1.5 border-b px-5 py-4",
-      className,
-    )}
-    {...props}
-  />
-));
-CardHeader.displayName = "CardHeader";
+function CardHeader({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card-header"
+      className={cn(
+        "group/card-header @container/card-header grid auto-rows-min items-start gap-1.5 rounded-t-[min(var(--radius-4xl),24px)] px-5 group-data-[size=sm]/card:px-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-5 group-data-[size=sm]/card:[.border-b]:pb-4",
+        className
+      )}
+      {...props} />
+  );
+}
 
-const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
-  <h3 ref={ref} data-slot="card-title" className={cn("text-base font-semibold leading-none", className)} {...props} />
-));
-CardTitle.displayName = "CardTitle";
+function CardTitle({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card-title"
+      className={cn("font-heading text-base font-medium", className)}
+      {...props} />
+  );
+}
 
-const CardDescription = React.forwardRef(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    data-slot="card-description"
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-));
-CardDescription.displayName = "CardDescription";
+function CardDescription({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card-description"
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props} />
+  );
+}
 
-const CardAction = React.forwardRef(({ className, ...props }, ref) => (
-  <div ref={ref} data-slot="card-action" className={cn("col-start-2 row-span-2 row-start-1", className)} {...props} />
-));
-CardAction.displayName = "CardAction";
+function CardAction({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn(
+        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        className
+      )}
+      {...props} />
+  );
+}
 
-const CardContent = React.forwardRef(({ className, ...props }, ref) => (
-  <div ref={ref} data-slot="card-content" className={cn("px-5 py-4", className)} {...props} />
-));
-CardContent.displayName = "CardContent";
+function CardContent({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card-content"
+      className={cn("px-5 group-data-[size=sm]/card:px-4", className)}
+      {...props} />
+  );
+}
 
-const CardFooter = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    data-slot="card-footer"
-    className={cn("flex items-center border-t px-5 py-4", className)}
-    {...props}
-  />
-));
-CardFooter.displayName = "CardFooter";
+function CardFooter({
+  className,
+  ...props
+}) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn(
+        "flex items-center rounded-b-[min(var(--radius-4xl),24px)] px-5 group-data-[size=sm]/card:px-4 [.border-t]:pt-5 group-data-[size=sm]/card:[.border-t]:pt-4",
+        className
+      )}
+      {...props} />
+  );
+}
 
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardAction,
+  CardDescription,
+  CardContent,
+}

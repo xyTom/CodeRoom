@@ -13,17 +13,16 @@ export function CandidateRoom({
   zoomProps,
 }) {
   return (
-    <main className="candidate-grid">
-      <div className="candidate-workspace-panel">
+    <main className="grid min-h-0 min-w-0 grid-cols-[minmax(30rem,1fr)_minmax(18rem,22rem)] gap-3 overflow-hidden p-3 max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
+      <section className="min-h-0 min-w-0 max-[900px]:min-h-[70vh]">
         <WorkspacePanel
           ready={session.workspace.ready}
           available={session.room.candidateAdmitted}
           revision={workspaceRevision}
           onReload={onReloadWorkspace}
         />
-      </div>
-      <div className="resize-handle vertical" data-resize="candidate-dock" title="Resize panels" />
-      <aside className="candidate-dock">
+      </section>
+      <aside className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto">
         <ZoomPanel session={session} {...zoomProps} />
         <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} />
       </aside>
@@ -43,23 +42,22 @@ export function InterviewerRoom({
   zoomProps,
 }) {
   return (
-    <main className="interviewer-grid">
-      <CandidatePanel session={session} onAdmit={onAdmit} admitting={admitting} />
-      <div className="resize-handle vertical interviewer-col-handle" data-resize="interviewer-left" title="Resize panels" />
-
-      <ZoomPanel session={session} {...zoomProps} />
-      <div className="resize-handle horizontal interviewer-row-handle" data-resize="interviewer-top" title="Resize call and workspace" />
-
-      <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} />
-
-      <div className="interviewer-workspace-panel">
+    <main className="grid min-h-0 min-w-0 grid-cols-[minmax(17rem,20rem)_minmax(28rem,1fr)_minmax(18rem,22rem)] gap-3 overflow-hidden p-3 max-[1180px]:grid-cols-[minmax(16rem,19rem)_minmax(0,1fr)] max-[1180px]:grid-rows-[minmax(0,1fr)_minmax(18rem,32vh)] max-[900px]:grid-cols-1 max-[900px]:grid-rows-none max-[900px]:overflow-visible">
+      <aside className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto max-[1180px]:row-span-2 max-[900px]:row-auto">
+        <CandidatePanel session={session} onAdmit={onAdmit} admitting={admitting} />
+        <ZoomPanel session={session} {...zoomProps} />
+      </aside>
+      <section className="min-h-0 min-w-0 max-[900px]:min-h-[70vh]">
         <WorkspacePanel
           ready={session.workspace.ready}
           available
           revision={workspaceRevision}
           onReload={onReloadWorkspace}
         />
-      </div>
+      </section>
+      <aside className="min-h-0 min-w-0 max-[1180px]:min-h-72">
+        <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} />
+      </aside>
     </main>
   );
 }

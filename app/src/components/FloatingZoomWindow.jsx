@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Grip, Maximize2, Minimize2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "coderoom:zoom-window";
+const STORAGE_KEY = "coderoom:zoom-window:v2";
 const MIN_WIDTH = 340;
 const MIN_HEIGHT = 240;
-const EDGE = 12;
+const EDGE = 16;
 
 function defaultBounds() {
   const width = Math.min(520, Math.max(MIN_WIDTH, window.innerWidth - EDGE * 2));
-  const height = Math.min(360, Math.max(MIN_HEIGHT, window.innerHeight - 92));
+  const height = Math.min(340, Math.max(MIN_HEIGHT, window.innerHeight - 112));
   return {
     width,
     height,
-    x: Math.max(EDGE, window.innerWidth - width - 20),
-    y: Math.max(76, window.innerHeight - height - 20),
+    x: Math.max(EDGE, window.innerWidth - width - EDGE),
+    y: Math.max(88, window.innerHeight - height - EDGE),
   };
 }
 
@@ -24,15 +26,15 @@ function clamp(value, min, max) {
 }
 
 function clampBounds(bounds) {
-  const maxWidth = Math.max(MIN_WIDTH, window.innerWidth - EDGE * 2);
-  const maxHeight = Math.max(MIN_HEIGHT, window.innerHeight - 76 - EDGE);
+  const maxWidth = Math.max(MIN_WIDTH, Math.min(720, window.innerWidth - EDGE * 2));
+  const maxHeight = Math.max(MIN_HEIGHT, Math.min(520, window.innerHeight - 88 - EDGE));
   const width = clamp(bounds.width, MIN_WIDTH, maxWidth);
   const height = clamp(bounds.height, MIN_HEIGHT, maxHeight);
   return {
     width,
     height,
     x: clamp(bounds.x, EDGE, Math.max(EDGE, window.innerWidth - width - EDGE)),
-    y: clamp(bounds.y, 70, Math.max(70, window.innerHeight - height - EDGE)),
+    y: clamp(bounds.y, 88, Math.max(88, window.innerHeight - height - EDGE)),
   };
 }
 
@@ -47,10 +49,13 @@ function readStoredBounds() {
 
 export function FloatingZoomWindow({ visible, loading, joined, containerRef, onClose }) {
   const [bounds, setBounds] = useState(readStoredBounds);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bounds));
-  }, [bounds]);
+    if (!expanded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bounds));
+    }
+  }, [bounds, expanded]);
 
   useEffect(() => {
     const onResize = () => setBounds((current) => clampBounds(current));
@@ -59,17 +64,27 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
   }, []);
 
   const style = useMemo(
-    () => ({
-      left: `${bounds.x}px`,
-      top: `${bounds.y}px`,
-      width: `${bounds.width}px`,
-      height: `${bounds.height}px`,
-    }),
-    [bounds],
+    () =>
+      expanded
+        ? {
+            left: "1rem",
+            top: "5rem",
+            right: "1rem",
+            bottom: "1rem",
+            width: "auto",
+            height: "auto",
+          }
+        : {
+            left: `${bounds.x}px`,
+            top: `${bounds.y}px`,
+            width: `${bounds.width}px`,
+            height: `${bounds.height}px`,
+          },
+    [bounds, expanded],
   );
 
   function startDrag(event) {
-    if (event.button !== 0) {
+    if (expanded || event.button !== 0) {
       return;
     }
     event.preventDefault();
@@ -98,6 +113,9 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
   }
 
   function startResize(event) {
+    if (expanded) {
+      return;
+    }
     event.preventDefault();
     const startX = event.clientX;
     const startY = event.clientY;
@@ -123,25 +141,57 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
     window.addEventListener("pointerup", onUp);
   }
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <div className="zoom-floating-window" style={style} hidden={!visible}>
-      <div className="zoom-window-bar" onPointerDown={startDrag}>
-        <strong>{joined ? "Zoom" : loading ? "Starting Zoom" : "Zoom"}</strong>
-        <Button
-          variant="secondary"
-          size="icon"
-          type="button"
-          title="Hide Zoom"
-          aria-label="Hide Zoom"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={onClose}
+    <Card
+      className={cn(
+        "fixed z-[60] grid gap-0 overflow-hidden p-0 shadow-xl",
+        expanded ? "grid-rows-[3rem_minmax(0,1fr)]" : "grid-rows-[3rem_minmax(0,1fr)]",
+      )}
+      style={style}
+      hidden={!visible}
+    >
+      <CardHeader className="grid-cols-[1fr_auto] cursor-move select-none border-b px-4 py-2" onPointerDown={startDrag}>
+        <div className="min-w-0">
+          <strong className="block truncate text-sm">{joined ? "Zoom session" : loading ? "Starting Zoom" : "Zoom"}</strong>
+          <span className="block truncate text-xs text-muted-foreground">
+            {expanded ? "Expanded view" : "Floating view"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1" onPointerDown={(event) => event.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            title={expanded ? "Restore Zoom" : "Expand Zoom"}
+            aria-label={expanded ? "Restore Zoom" : "Expand Zoom"}
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? <Minimize2 data-icon="inline-start" /> : <Maximize2 data-icon="inline-start" />}
+          </Button>
+          <Button variant="ghost" size="icon" type="button" title="Hide Zoom" aria-label="Hide Zoom" onClick={onClose}>
+            <X data-icon="inline-start" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="relative min-h-0 overflow-hidden p-0">
+        <div className="h-full w-full bg-muted" ref={containerRef} />
+        {loading && !joined ? (
+          <div className="absolute inset-0 grid place-items-center bg-muted text-sm text-muted-foreground">Loading Zoom...</div>
+        ) : null}
+      </CardContent>
+      {!expanded ? (
+        <div
+          className="absolute bottom-0 right-0 grid size-7 cursor-nwse-resize place-items-center text-muted-foreground"
+          title="Resize Zoom"
+          onPointerDown={startResize}
         >
-          <X data-icon="inline-start" />
-        </Button>
-      </div>
-      <div className="zoom-container" ref={containerRef} />
-      {loading && !joined ? <div className="zoom-loading">Loading Zoom...</div> : null}
-      <div className="zoom-resize-handle" title="Resize Zoom" onPointerDown={startResize} />
-    </div>
+          <Grip className="size-3" />
+        </div>
+      ) : null}
+    </Card>
   );
 }

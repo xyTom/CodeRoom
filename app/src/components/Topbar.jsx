@@ -1,7 +1,7 @@
-import { LogOut } from "lucide-react";
+import { LogOut, TerminalSquare } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export function Topbar({ session }) {
   const roleText = session?.name ? `${session.role}: ${session.name}` : session?.role || "role";
@@ -10,21 +10,25 @@ export function Topbar({ session }) {
   const workspaceText = workspaceReady && workspaceAvailable ? "workspace ready" : "workspace starting";
 
   return (
-    <header className="flex min-h-16 items-center justify-between gap-4 border-b bg-card px-4 py-3 text-card-foreground shadow-sm max-[900px]:items-start max-[900px]:flex-col">
-      <div className="brand-row compact min-w-0">
-        <div className="brand-mark">CR</div>
+    <header className="relative z-20 flex min-h-16 items-center justify-between gap-4 border-b bg-card px-4 py-3 text-card-foreground max-[900px]:items-start max-[900px]:flex-col">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+          <TerminalSquare />
+        </div>
         <div className="min-w-0">
-          <h1 className="truncate font-semibold tracking-tight">CodeRoom</h1>
-          <p className="truncate text-sm text-muted-foreground">{session?.sessionName || "Loading room..."}</p>
+          <h1 className="truncate text-base font-semibold tracking-tight">CodeRoom</h1>
+          <p className="truncate text-xs text-muted-foreground">{session?.sessionName || "Loading room..."}</p>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         <Badge>{roleText}</Badge>
         <Badge variant={workspaceReady && workspaceAvailable ? "secondary" : "outline"}>{workspaceText}</Badge>
-        <a className={buttonVariants({ variant: "ghost", size: "sm" })} href="/logout">
-          <LogOut data-icon="inline-start" />
-          Leave
-        </a>
+        <Button variant="ghost" size="sm" asChild>
+          <a href="/logout">
+            <LogOut data-icon="inline-start" />
+            Leave
+          </a>
+        </Button>
       </div>
     </header>
   );

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyIcon, EmptyTitle } from "@/components/ui/empty";
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -32,10 +33,15 @@ export function ChatPanel({ messages, status, onSend }) {
   }
 
   return (
-    <Card className="chat-panel grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
+    <Card className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
       <CardHeader>
-        <CardTitle>Chat</CardTitle>
-        <CardAction className="text-sm text-muted-foreground">{status}</CardAction>
+        <div>
+          <CardTitle>Chat</CardTitle>
+          <CardDescription>Room messages</CardDescription>
+        </div>
+        <CardAction>
+          <Badge variant={status === "live" ? "secondary" : "outline"}>{status}</Badge>
+        </CardAction>
       </CardHeader>
       <CardContent className="min-h-0 overflow-auto p-0" ref={messagesRef}>
         {messages.length ? (
@@ -53,16 +59,16 @@ export function ChatPanel({ messages, status, onSend }) {
         ) : (
           <Empty className="h-full">
             <EmptyHeader>
-              <EmptyIcon>
+              <EmptyMedia variant="icon">
                 <MessageCircle />
-              </EmptyIcon>
+              </EmptyMedia>
               <EmptyTitle>No messages yet</EmptyTitle>
               <EmptyDescription>Messages between interviewer and candidate will appear here.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         )}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="bg-card">
         <form className="w-full" onSubmit={handleSubmit}>
           <FieldGroup className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
             <Field className="min-w-0">
