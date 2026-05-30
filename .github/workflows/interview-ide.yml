@@ -126,6 +126,20 @@ jobs:
           cat cloudflared.log
           exit 1
 
+      - name: Print interview connection details
+        env:
+          SESSION_URL: ${{ steps.tunnel.outputs.url }}
+          SESSION_PASSWORD: ${{ steps.settings.outputs.password }}
+          SESSION_DURATION: ${{ steps.settings.outputs.duration }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Interview IDE URL: $SESSION_URL"
+          echo "Interview IDE password: $SESSION_PASSWORD"
+          echo "Interview IDE expires after: $SESSION_DURATION minutes"
+          echo "::notice title=Interview IDE::URL: $SESSION_URL | Password: $SESSION_PASSWORD | Expires after: $SESSION_DURATION minutes"
+
       - name: Keep interview session alive
         shell: bash
         run: |
