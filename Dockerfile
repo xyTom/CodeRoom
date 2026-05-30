@@ -22,7 +22,15 @@ RUN npm install -g \
         @google/gemini-cli \
     && npm cache clean --force
 
+COPY app/package*.json /opt/coderoom/app/
+WORKDIR /opt/coderoom/app
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
 COPY app/ /opt/coderoom/app/
+RUN npm run build \
+    && npm prune --omit=dev \
+    && npm cache clean --force
+
 COPY scripts/start-interview-ide.sh /usr/local/bin/start-interview-ide
 RUN chmod +x /usr/local/bin/start-interview-ide
 
