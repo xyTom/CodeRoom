@@ -1,0 +1,154 @@
+name: Interview IDE
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: "How long to keep the interview IDE alive. GitHub-hosted runners stop after 6 hours."
+        required: true
+        default: "120"
+      password:
+        description: "Optional code-server password. Leave blank to generate one."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  start:
+    name: Start browser IDE
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      IDE_PORT: "8080"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve session settings
+        id: settings
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          duration="${{ github.event.inputs.duration_minutes }}"
+          if ! [[ "$duration" =~ ^[0-9]+$ ]]; then
+            echo "duration_minutes must be an integer" >&2
+            exit 1
+          fi
+          if (( duration < 5 || duration > 330 )); then
+            echo "duration_minutes must be between 5 and 330" >&2
+            exit 1
+          fi
+
+          password="${{ github.event.inputs.password }}"
+          if [[ -z "$password" ]]; then
+            password="$(openssl rand -hex 12)"
+          elif ! [[ "$password" =~ ^[A-Za-z0-9._@+-]{8,64}$ ]]; then
+            echo "password must be 8-64 chars and only use A-Z, a-z, 0-9, dot, underscore, at, plus, or dash" >&2
+            exit 1
+          fi
+
+          {
+            echo "duration=$duration"
+            echo "password<<EOF"
+            echo "$password"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build interview IDE image
+        run: docker build -t interview-ide:latest .
+
+      - name: Start code-server
+        env:
+          PASSWORD: ${{ steps.settings.outputs.password }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker run -d \
+            --name interview-ide \
+            --cpus "2" \
+            --memory "4g" \
+            --pids-limit "512" \
+            -p "127.0.0.1:${IDE_PORT}:8080" \
+            -e PASSWORD="$PASSWORD" \
+            interview-ide:latest
+
+          for _ in {1..60}; do
+            if curl -fsS "http://127.0.0.1:${IDE_PORT}/healthz" > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs interview-ide
+          exit 1
+
+      - name: Start Cloudflare quick tunnel
+        id: tunnel
+        env:
+          SESSION_DURATION: ${{ steps.settings.outputs.duration }}
+          SESSION_PASSWORD: ${{ steps.settings.outputs.password }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker run -d \
+            --name cloudflared \
+            --network host \
+            cloudflare/cloudflared:latest \
+            tunnel --no-autoupdate --url "http://127.0.0.1:${IDE_PORT}"
+
+          for _ in {1..60}; do
+            docker logs cloudflared > cloudflared.log 2>&1 || true
+            tunnel_url="$(grep -Eo 'https://[-a-zA-Z0-9]+\.trycloudflare\.com' cloudflared.log | head -n 1 || true)"
+
+            if [[ -n "$tunnel_url" ]]; then
+              echo "url=$tunnel_url" >> "$GITHUB_OUTPUT"
+              {
+                echo "## Interview IDE"
+                echo ""
+                echo "- URL: $tunnel_url"
+                echo "- Password: $SESSION_PASSWORD"
+                echo "- Expires after: $SESSION_DURATION minutes"
+                echo ""
+                echo "Keep this workflow run open while the interview is active."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          cat cloudflared.log
+          exit 1
+
+      - name: Keep interview session alive
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Interview IDE is live: ${{ steps.tunnel.outputs.url }}"
+          echo "The job will sleep for ${{ steps.settings.outputs.duration }} minutes."
+          sleep "$(( ${{ steps.settings.outputs.duration }} * 60 ))"
+
+      - name: Collect interview artifacts
+        if: always()
+        shell: bash
+        run: |
+          set -u
+
+          mkdir -p artifacts
+          docker cp interview-ide:/home/coder/project artifacts/project 2>/dev/null || true
+          docker logs interview-ide > artifacts/code-server.log 2>&1 || true
+          docker logs cloudflared > artifacts/cloudflared.log 2>&1 || true
+
+      - name: Upload interview artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interview-session-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: ignore

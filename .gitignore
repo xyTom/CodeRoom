@@ -1,0 +1,3 @@
+artifacts/
+cloudflared.log
+.DS_Store
