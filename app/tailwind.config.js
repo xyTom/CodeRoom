@@ -1,5 +1,17 @@
 import animate from "tailwindcss-animate";
 
+function colorVariable(name) {
+  return ({ opacityValue } = {}) => {
+    if (opacityValue === undefined || String(opacityValue).startsWith("var(")) {
+      return `var(${name})`;
+    }
+
+    const numericOpacity = Number(opacityValue);
+    const opacity = Number.isFinite(numericOpacity) ? `${numericOpacity * 100}%` : opacityValue;
+    return `color-mix(in oklch, var(${name}) ${opacity}, transparent)`;
+  };
+}
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ["class"],
@@ -7,38 +19,48 @@ export default {
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: colorVariable("--border"),
+        input: colorVariable("--input"),
+        ring: colorVariable("--ring"),
+        background: colorVariable("--background"),
+        foreground: colorVariable("--foreground"),
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: colorVariable("--primary"),
+          foreground: colorVariable("--primary-foreground"),
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: colorVariable("--secondary"),
+          foreground: colorVariable("--secondary-foreground"),
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: colorVariable("--destructive"),
+          foreground: colorVariable("--destructive-foreground"),
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: colorVariable("--muted"),
+          foreground: colorVariable("--muted-foreground"),
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: colorVariable("--accent"),
+          foreground: colorVariable("--accent-foreground"),
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: colorVariable("--popover"),
+          foreground: colorVariable("--popover-foreground"),
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: colorVariable("--card"),
+          foreground: colorVariable("--card-foreground"),
+        },
+        sidebar: {
+          DEFAULT: colorVariable("--sidebar"),
+          foreground: colorVariable("--sidebar-foreground"),
+          primary: colorVariable("--sidebar-primary"),
+          "primary-foreground": colorVariable("--sidebar-primary-foreground"),
+          accent: colorVariable("--sidebar-accent"),
+          "accent-foreground": colorVariable("--sidebar-accent-foreground"),
+          border: colorVariable("--sidebar-border"),
+          ring: colorVariable("--sidebar-ring"),
         },
       },
       borderRadius: {
@@ -47,15 +69,8 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: [
-          "Inter",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Segoe UI"',
-          "sans-serif",
-        ],
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
     },
   },

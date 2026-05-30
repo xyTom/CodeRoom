@@ -68,7 +68,7 @@ export function ChatPanel({ messages, status, onSend }) {
           </Empty>
         )}
       </CardContent>
-      <CardFooter className="bg-card">
+      <CardFooter className="border-t bg-card">
         <form className="w-full" onSubmit={handleSubmit}>
           <FieldGroup className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
             <Field className="min-w-0">
@@ -84,9 +84,9 @@ export function ChatPanel({ messages, status, onSend }) {
                 onChange={(event) => setDraft(event.target.value)}
               />
             </Field>
-            <Button type="submit">
-              <Send data-icon="inline-start" />
-              Send
+            <Button size="icon" type="submit">
+              <Send />
+              <span className="sr-only">Send message</span>
             </Button>
           </FieldGroup>
         </form>

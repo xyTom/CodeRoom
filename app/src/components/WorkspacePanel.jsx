@@ -1,5 +1,6 @@
 import { Monitor, RefreshCw } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -15,10 +16,11 @@ export function WorkspacePanel({ ready, available, title = "Workspace", revision
           <CardTitle>{title}</CardTitle>
           <CardDescription>Shared code-server workspace</CardDescription>
         </div>
-        <CardAction>
-          <Button variant="outline" size="sm" type="button" onClick={onReload} disabled={!showFrame}>
-            <RefreshCw data-icon="inline-start" />
-            Reload
+        <CardAction className="flex items-center gap-2">
+          <Badge variant={showFrame ? "secondary" : "outline"}>{showFrame ? "ready" : "starting"}</Badge>
+          <Button variant="outline" size="icon-sm" type="button" onClick={onReload} disabled={!showFrame}>
+            <RefreshCw />
+            <span className="sr-only">Reload workspace</span>
           </Button>
         </CardAction>
       </CardHeader>
