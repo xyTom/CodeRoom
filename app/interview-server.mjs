@@ -1403,7 +1403,14 @@ async function joinZoom() {
       sessionName: zoom.sessionName,
       userName: zoom.userName,
       sessionPasscode: zoom.sessionPasscode,
-      featuresOptions: ["video", "audio", "share", "chat", "users", "settings"],
+      featuresOptions: {
+        video: { enable: true },
+        audio: { enable: true },
+        share: { enable: true },
+        chat: { enable: true },
+        users: { enable: true },
+        settings: { enable: true },
+      },
     };
     uitoolkit.joinSession(sessionContainer, config);
     zoomJoined = true;
