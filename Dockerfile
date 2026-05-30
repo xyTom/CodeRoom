@@ -10,11 +10,17 @@ RUN apt-get update \
         jq \
         nodejs \
         npm \
-        openjdk-17-jdk \
+        default-jdk \
         python3 \
         python3-pip \
         python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g \
+        @openai/codex \
+        @anthropic-ai/claude-code \
+        @google/gemini-cli \
+    && npm cache clean --force
 
 USER coder
 WORKDIR /home/coder/project

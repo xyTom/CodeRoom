@@ -30,9 +30,17 @@ The current image includes:
 
 - Python 3
 - Node.js and npm
-- Java 17
+- Java default JDK
 - git, curl, jq
 - basic C/C++ build tools
+- AI coding CLIs:
+  - Codex CLI: `codex`
+  - Claude Code: `claude`
+  - Gemini CLI: `gemini`
+
+AI coding CLIs are installed in the image, but authentication is not baked into
+the container. Sign in or provide provider API keys inside each interview
+session as needed.
 
 Add more packages in `Dockerfile` if a role needs a different runtime.
 
