@@ -1,4 +1,4 @@
-name: Interview IDE
+name: Interview Room
 
 on:
   workflow_dispatch:
@@ -8,16 +8,21 @@ on:
         required: true
         default: "120"
       password:
-        description: "Optional code-server password. Leave blank to generate one."
+        description: "Optional room password. Leave blank to generate one."
         required: false
         default: ""
+      enable_ai_credentials:
+        description: "Pass configured AI CLI secrets into the interview container."
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
   start:
-    name: Start browser IDE
+    name: Start interview room
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -51,22 +56,91 @@ jobs:
             exit 1
           fi
 
+          session_name="coderoom-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          interviewer_token="$(openssl rand -hex 24)"
+          candidate_token="$(openssl rand -hex 24)"
+          zoom_passcode="$(openssl rand -hex 5)"
+
           {
             echo "duration=$duration"
+            echo "session_name=$session_name"
+            echo "interviewer_token=$interviewer_token"
+            echo "candidate_token=$candidate_token"
+            echo "zoom_passcode=$zoom_passcode"
             echo "password<<EOF"
             echo "$password"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build interview IDE image
+      - name: Build interview room image
         run: docker build -t interview-ide:latest .
 
-      - name: Start code-server
+      - name: Start interview room
         env:
-          PASSWORD: ${{ steps.settings.outputs.password }}
+          ROOM_PASSWORD: ${{ steps.settings.outputs.password }}
+          INTERVIEWER_TOKEN: ${{ steps.settings.outputs.interviewer_token }}
+          CANDIDATE_TOKEN: ${{ steps.settings.outputs.candidate_token }}
+          INTERVIEW_SESSION_NAME: ${{ steps.settings.outputs.session_name }}
+          SESSION_DURATION_MINUTES: ${{ steps.settings.outputs.duration }}
+          ZOOM_VIDEO_SDK_KEY: ${{ secrets.ZOOM_VIDEO_SDK_KEY }}
+          ZOOM_VIDEO_SDK_SECRET: ${{ secrets.ZOOM_VIDEO_SDK_SECRET }}
+          ZOOM_SESSION_NAME: ${{ steps.settings.outputs.session_name }}
+          ZOOM_SESSION_PASSCODE: ${{ steps.settings.outputs.zoom_passcode }}
+          ZOOM_UI_TOOLKIT_VERSION: ${{ vars.ZOOM_UI_TOOLKIT_VERSION }}
+          ENABLE_AI_CREDENTIALS: ${{ inputs.enable_ai_credentials }}
+          CODEX_ACCESS_TOKEN: ${{ inputs.enable_ai_credentials && secrets.CODEX_ACCESS_TOKEN || '' }}
+          CODEX_AUTH_JSON: ${{ inputs.enable_ai_credentials && secrets.CODEX_AUTH_JSON || '' }}
+          OPENAI_API_KEY: ${{ inputs.enable_ai_credentials && secrets.OPENAI_API_KEY || '' }}
+          ANTHROPIC_API_KEY: ${{ inputs.enable_ai_credentials && secrets.ANTHROPIC_API_KEY || '' }}
+          ANTHROPIC_AUTH_TOKEN: ${{ inputs.enable_ai_credentials && secrets.ANTHROPIC_AUTH_TOKEN || '' }}
+          ANTHROPIC_BASE_URL: ${{ inputs.enable_ai_credentials && vars.ANTHROPIC_BASE_URL || '' }}
+          GEMINI_API_KEY: ${{ inputs.enable_ai_credentials && secrets.GEMINI_API_KEY || '' }}
+          GOOGLE_API_KEY: ${{ inputs.enable_ai_credentials && secrets.GOOGLE_API_KEY || '' }}
+          GOOGLE_CLOUD_PROJECT: ${{ inputs.enable_ai_credentials && vars.GOOGLE_CLOUD_PROJECT || '' }}
+          GOOGLE_CLOUD_LOCATION: ${{ inputs.enable_ai_credentials && vars.GOOGLE_CLOUD_LOCATION || '' }}
+          GOOGLE_GENAI_USE_VERTEXAI: ${{ inputs.enable_ai_credentials && vars.GOOGLE_GENAI_USE_VERTEXAI || '' }}
         shell: bash
         run: |
           set -euo pipefail
+
+          docker_env_args=(
+            -e "ROOM_PASSWORD=$ROOM_PASSWORD"
+            -e "INTERVIEWER_TOKEN=$INTERVIEWER_TOKEN"
+            -e "CANDIDATE_TOKEN=$CANDIDATE_TOKEN"
+            -e "INTERVIEW_SESSION_NAME=$INTERVIEW_SESSION_NAME"
+            -e "SESSION_DURATION_MINUTES=$SESSION_DURATION_MINUTES"
+            -e "ZOOM_SESSION_NAME=$ZOOM_SESSION_NAME"
+            -e "ZOOM_SESSION_PASSCODE=$ZOOM_SESSION_PASSCODE"
+          )
+          for name in \
+            ZOOM_VIDEO_SDK_KEY \
+            ZOOM_VIDEO_SDK_SECRET \
+            ZOOM_UI_TOOLKIT_VERSION; do
+            value="${!name:-}"
+            if [[ -n "$value" ]]; then
+              docker_env_args+=(-e "$name=$value")
+            fi
+          done
+
+          if [[ "$ENABLE_AI_CREDENTIALS" == "true" ]]; then
+            for name in \
+              CODEX_ACCESS_TOKEN \
+              CODEX_AUTH_JSON \
+              OPENAI_API_KEY \
+              ANTHROPIC_API_KEY \
+              ANTHROPIC_AUTH_TOKEN \
+              ANTHROPIC_BASE_URL \
+              GEMINI_API_KEY \
+              GOOGLE_API_KEY \
+              GOOGLE_CLOUD_PROJECT \
+              GOOGLE_CLOUD_LOCATION \
+              GOOGLE_GENAI_USE_VERTEXAI; do
+              value="${!name:-}"
+              if [[ -n "$value" ]]; then
+                docker_env_args+=(-e "$name=$value")
+              fi
+            done
+          fi
 
           docker run -d \
             --name interview-ide \
@@ -74,7 +148,7 @@ jobs:
             --memory "4g" \
             --pids-limit "512" \
             -p "127.0.0.1:${IDE_PORT}:8080" \
-            -e PASSWORD="$PASSWORD" \
+            "${docker_env_args[@]}" \
             interview-ide:latest
 
           for _ in {1..60}; do
@@ -92,6 +166,9 @@ jobs:
         env:
           SESSION_DURATION: ${{ steps.settings.outputs.duration }}
           SESSION_PASSWORD: ${{ steps.settings.outputs.password }}
+          INTERVIEWER_TOKEN: ${{ steps.settings.outputs.interviewer_token }}
+          CANDIDATE_TOKEN: ${{ steps.settings.outputs.candidate_token }}
+          ENABLE_AI_CREDENTIALS: ${{ inputs.enable_ai_credentials }}
         shell: bash
         run: |
           set -euo pipefail
@@ -108,14 +185,20 @@ jobs:
 
             if [[ -n "$tunnel_url" ]]; then
               echo "url=$tunnel_url" >> "$GITHUB_OUTPUT"
+              interviewer_url="${tunnel_url}/room?token=${INTERVIEWER_TOKEN}"
+              candidate_url="${tunnel_url}/room?token=${CANDIDATE_TOKEN}"
+              echo "interviewer_url=$interviewer_url" >> "$GITHUB_OUTPUT"
+              echo "candidate_url=$candidate_url" >> "$GITHUB_OUTPUT"
               {
-                echo "## Interview IDE"
+                echo "## Interview Room"
                 echo ""
-                echo "- URL: $tunnel_url"
-                echo "- Password: $SESSION_PASSWORD"
+                echo "- Interviewer URL: $interviewer_url"
+                echo "- Candidate URL: $candidate_url"
+                echo "- Room password: $SESSION_PASSWORD"
                 echo "- Expires after: $SESSION_DURATION minutes"
+                echo "- AI CLI credentials enabled: $ENABLE_AI_CREDENTIALS"
                 echo ""
-                echo "Keep this workflow run open while the interview is active."
+                echo "Keep this workflow run open while the interview room is active."
               } >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
@@ -129,22 +212,28 @@ jobs:
       - name: Print interview connection details
         env:
           SESSION_URL: ${{ steps.tunnel.outputs.url }}
+          INTERVIEWER_URL: ${{ steps.tunnel.outputs.interviewer_url }}
+          CANDIDATE_URL: ${{ steps.tunnel.outputs.candidate_url }}
           SESSION_PASSWORD: ${{ steps.settings.outputs.password }}
           SESSION_DURATION: ${{ steps.settings.outputs.duration }}
+          ENABLE_AI_CREDENTIALS: ${{ inputs.enable_ai_credentials }}
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Interview IDE URL: $SESSION_URL"
-          echo "Interview IDE password: $SESSION_PASSWORD"
-          echo "Interview IDE expires after: $SESSION_DURATION minutes"
-          echo "::notice title=Interview IDE::URL: $SESSION_URL | Password: $SESSION_PASSWORD | Expires after: $SESSION_DURATION minutes"
+          echo "Interview room URL: $SESSION_URL"
+          echo "Interviewer URL: $INTERVIEWER_URL"
+          echo "Candidate URL: $CANDIDATE_URL"
+          echo "Room password: $SESSION_PASSWORD"
+          echo "Interview room expires after: $SESSION_DURATION minutes"
+          echo "AI CLI credentials enabled: $ENABLE_AI_CREDENTIALS"
+          echo "::notice title=Interview Room::Interviewer: $INTERVIEWER_URL | Candidate: $CANDIDATE_URL | Password: $SESSION_PASSWORD | Expires after: $SESSION_DURATION minutes | AI credentials: $ENABLE_AI_CREDENTIALS"
 
       - name: Keep interview session alive
         shell: bash
         run: |
           set -euo pipefail
-          echo "Interview IDE is live: ${{ steps.tunnel.outputs.url }}"
+          echo "Interview room is live: ${{ steps.tunnel.outputs.url }}"
           echo "The job will sleep for ${{ steps.settings.outputs.duration }} minutes."
           sleep "$(( ${{ steps.settings.outputs.duration }} * 60 ))"
 

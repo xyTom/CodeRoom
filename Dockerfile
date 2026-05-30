@@ -22,6 +22,10 @@ RUN npm install -g \
         @google/gemini-cli \
     && npm cache clean --force
 
+COPY app/ /opt/coderoom/app/
+COPY scripts/start-interview-ide.sh /usr/local/bin/start-interview-ide
+RUN chmod +x /usr/local/bin/start-interview-ide
+
 USER coder
 WORKDIR /home/coder/project
 
@@ -29,4 +33,4 @@ COPY --chown=coder:coder workspace/ /home/coder/project/
 
 EXPOSE 8080
 
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password", "/home/coder/project"]
+CMD ["start-interview-ide"]
