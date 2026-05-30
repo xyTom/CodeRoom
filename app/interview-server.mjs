@@ -1310,7 +1310,7 @@ async function handleLogin(req, res) {
   const password = params.get("password") || "";
   const requestedRole = params.get("role") === "interviewer" ? "interviewer" : "candidate";
   if (!ROOM_PASSWORD || !timingSafeEqual(password, ROOM_PASSWORD)) {
-    send(res, 401, renderLogin("Password did not match."), { "Content-Type": "text/html; charset=utf-8" });
+    send(res, 200, renderLogin("Password did not match."), { "Content-Type": "text/html; charset=utf-8" });
     return;
   }
 
@@ -1354,7 +1354,7 @@ async function handleRequest(req, res) {
     }
     const session = getSession(req);
     if (!session) {
-      send(res, 401, renderLogin(), { "Content-Type": "text/html; charset=utf-8" });
+      send(res, 200, renderLogin(), { "Content-Type": "text/html; charset=utf-8" });
       return;
     }
     if (!session.name) {
