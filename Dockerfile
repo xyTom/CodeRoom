@@ -33,4 +33,5 @@ COPY --chown=coder:coder workspace/ /home/coder/project/
 
 EXPOSE 8080
 
+ENTRYPOINT []
 CMD ["start-interview-ide"]
