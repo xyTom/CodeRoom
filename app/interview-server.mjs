@@ -667,6 +667,10 @@ async function handleRequest(req, res) {
   }
 
   if (url.pathname === "/api/invite-zoom" && req.method === "POST") {
+    if (session.role === "candidate" && !roomState.candidateAdmitted) {
+      sendJson(res, 403, { error: "candidate is waiting for admission" });
+      return;
+    }
     if (!ZOOM_VIDEO_SDK_KEY || !ZOOM_VIDEO_SDK_SECRET) {
       sendJson(res, 404, { error: "Zoom Video SDK is not configured" });
       return;
@@ -681,6 +685,10 @@ async function handleRequest(req, res) {
   }
 
   if (url.pathname === "/api/zoom-session") {
+    if (session.role === "candidate" && !roomState.candidateAdmitted) {
+      sendJson(res, 403, { error: "candidate is waiting for admission" });
+      return;
+    }
     const videoSDKJWT = signZoomJwt(session.role, session.token);
     if (!videoSDKJWT) {
       sendJson(res, 404, { error: "Zoom Video SDK is not configured" });

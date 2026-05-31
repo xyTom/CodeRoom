@@ -8,6 +8,7 @@ import {
   sendMessage,
   subscribeRoomEvents,
 } from "./api.js";
+import { CandidateLobby } from "./components/CandidateLobby.jsx";
 import { FloatingZoomWindow } from "./components/FloatingZoomWindow.jsx";
 import { CandidateRoom, InterviewerRoom } from "./components/RoomLayouts.jsx";
 import { Topbar } from "./components/Topbar.jsx";
@@ -16,7 +17,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { loadZoomToolkit } from "./zoomToolkit.js";
 
 function canJoinZoom(session) {
-  return Boolean(session?.zoom?.enabled);
+  if (!session?.zoom?.enabled) {
+    return false;
+  }
+  return session.role !== "candidate" || session.room.candidateAdmitted;
 }
 
 function zoomNoticeFor(session, joined) {
@@ -26,6 +30,10 @@ function zoomNoticeFor(session, joined) {
 
   if (joined) {
     return "Zoom is open in the floating window.";
+  }
+
+  if (session.role === "candidate" && !session.room.candidateAdmitted) {
+    return "Waiting for interviewer approval.";
   }
 
   if (session.room.zoomInviteAt && session.room.zoomInviteByRole !== session.role) {
@@ -362,13 +370,17 @@ export function App() {
     session.zoom.enabled &&
     Boolean(session.room.zoomInviteAt) &&
     session.room.zoomInviteByRole !== session.role &&
+    canJoinZoom(session) &&
     !zoomJoined;
+  const candidateWaiting = session.role === "candidate" && !session.room.candidateAdmitted;
 
   return (
     <div className="h-full min-h-0 bg-muted">
       <div className="grid h-screen min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
         <Topbar session={session} />
-        {session.role === "candidate" ? (
+        {candidateWaiting ? (
+          <CandidateLobby session={session} />
+        ) : session.role === "candidate" ? (
           <CandidateRoom
             session={session}
             messages={messages}

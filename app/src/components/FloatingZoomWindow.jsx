@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grip, Maximize2, Minimize2, PhoneOff, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,57 @@ function readStoredBounds() {
   }
 }
 
+function setStyle(element, property, value) {
+  if (element && element.style[property] !== value) {
+    element.style[property] = value;
+  }
+}
+
+function setAttributeIfChanged(element, name, value) {
+  const nextValue = String(value);
+  if (element && element.getAttribute(name) !== nextValue) {
+    element.setAttribute(name, nextValue);
+  }
+}
+
+function isVisibleElement(element) {
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 && getComputedStyle(element).display !== "none";
+}
+
+function fitMediaShell(element) {
+  setStyle(element, "minWidth", "0");
+  setStyle(element, "minHeight", "0");
+  setStyle(element, "maxWidth", "100%");
+  setStyle(element, "maxHeight", "100%");
+  setStyle(element, "boxSizing", "border-box");
+}
+
+function resizeMediaElement(element, fallbackRect) {
+  const rect = isVisibleElement(element) ? element.getBoundingClientRect() : fallbackRect;
+  const width = Math.max(1, Math.round(rect.width || fallbackRect.width || 1));
+  const height = Math.max(1, Math.round(rect.height || fallbackRect.height || 1));
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+  setStyle(element, "maxWidth", "100%");
+  setStyle(element, "maxHeight", "100%");
+  setStyle(element, "objectFit", "contain");
+
+  if (element instanceof HTMLCanvasElement) {
+    const canvasWidth = Math.max(1, Math.round(width * pixelRatio));
+    const canvasHeight = Math.max(1, Math.round(height * pixelRatio));
+    if (element.width !== canvasWidth) {
+      element.width = canvasWidth;
+    }
+    if (element.height !== canvasHeight) {
+      element.height = canvasHeight;
+    }
+  } else if (element instanceof HTMLVideoElement) {
+    setAttributeIfChanged(element, "width", width);
+    setAttributeIfChanged(element, "height", height);
+  }
+}
+
 function syncZoomLayout(container) {
   if (!container) {
     return;
@@ -67,52 +118,71 @@ function syncZoomLayout(container) {
   const main = root.querySelector(".uikit-main-content");
   const sidebar = main?.querySelector(".w-0.h-full");
   const mainHeight = Math.max(0, height - (header?.offsetHeight || 0) - (footer?.offsetHeight || 0));
+  const stageRect = {
+    width,
+    height: mainHeight,
+  };
   const flexibleElements = root.querySelectorAll(
     [
       ".uikit-main-content > *",
       "video-player-container",
       "video-player",
+      "video-player-container > div",
       "#uikit-whiteboard-container",
       "#uikit-whiteboard-container-inner",
       "#ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS",
       "#ZOOM_VIDEO_SDK_SHARE_CANVAS",
       "canvas[id*='SHARE']",
+      "canvas[id*='share']",
       "[id*='share']",
     ].join(","),
   );
 
   for (const element of [root, app, appInner].filter(Boolean)) {
-    element.style.width = "100%";
-    element.style.height = "100%";
-    element.style.minWidth = "0";
-    element.style.minHeight = "0";
-    element.style.maxWidth = "100%";
-    element.style.maxHeight = "100%";
+    setStyle(element, "width", "100%");
+    setStyle(element, "height", "100%");
+    setStyle(element, "minWidth", "0");
+    setStyle(element, "minHeight", "0");
+    setStyle(element, "maxWidth", "100%");
+    setStyle(element, "maxHeight", "100%");
   }
 
   if (main) {
-    main.style.width = `${width}px`;
-    main.style.height = `${mainHeight}px`;
-    main.style.minWidth = "0";
-    main.style.minHeight = "0";
-    main.style.maxWidth = "100%";
+    setStyle(main, "width", `${width}px`);
+    setStyle(main, "height", `${mainHeight}px`);
+    setStyle(main, "minWidth", "0");
+    setStyle(main, "minHeight", "0");
+    setStyle(main, "maxWidth", "100%");
   }
 
   if (sidebar) {
-    sidebar.style.height = `${mainHeight}px`;
+    setStyle(sidebar, "height", `${mainHeight}px`);
   }
 
   for (const element of flexibleElements) {
-    element.style.minWidth = "0";
-    element.style.minHeight = "0";
-    element.style.maxWidth = "100%";
-    element.style.maxHeight = "100%";
+    fitMediaShell(element);
   }
 
-  for (const element of root.querySelectorAll("#ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS, #ZOOM_VIDEO_SDK_SHARE_CANVAS")) {
-    element.style.width = "100%";
-    element.style.height = "100%";
-    element.style.objectFit = "contain";
+  for (const element of root.querySelectorAll("[style*='max-width']")) {
+    if (element.querySelector("video-player-container, video-player, video, canvas")) {
+      setStyle(element, "maxWidth", "100%");
+      setStyle(element, "width", "100%");
+    }
+  }
+
+  for (const element of root.querySelectorAll("[style*='width'], [style*='height']")) {
+    if (
+      element !== main &&
+      isVisibleElement(element) &&
+      element.querySelector("#ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS, #ZOOM_VIDEO_SDK_SHARE_CANVAS, canvas[id*='SHARE']")
+    ) {
+      setStyle(element, "width", "100%");
+      setStyle(element, "height", "100%");
+    }
+  }
+
+  for (const element of root.querySelectorAll("canvas, video")) {
+    resizeMediaElement(element, stageRect);
   }
 
   container.dispatchEvent(new Event("resize", { bubbles: true }));
@@ -122,6 +192,7 @@ function syncZoomLayout(container) {
 export function FloatingZoomWindow({ visible, loading, joined, mounted, containerRef, onClose, onLeave }) {
   const [bounds, setBounds] = useState(readStoredBounds);
   const [expanded, setExpanded] = useState(false);
+  const syncScheduledRef = useRef(false);
 
   useEffect(() => {
     if (!expanded) {
@@ -136,10 +207,15 @@ export function FloatingZoomWindow({ visible, loading, joined, mounted, containe
   }, []);
 
   const requestZoomLayoutSync = useCallback(() => {
+    if (syncScheduledRef.current) {
+      return;
+    }
+    syncScheduledRef.current = true;
     requestAnimationFrame(() => {
       syncZoomLayout(containerRef.current);
       requestAnimationFrame(() => {
         syncZoomLayout(containerRef.current);
+        syncScheduledRef.current = false;
       });
       window.setTimeout(() => {
         syncZoomLayout(containerRef.current);
@@ -153,9 +229,26 @@ export function FloatingZoomWindow({ visible, loading, joined, mounted, containe
       return undefined;
     }
 
-    const observer = new ResizeObserver(requestZoomLayoutSync);
-    observer.observe(container);
-    return () => observer.disconnect();
+    const resizeObserver = new ResizeObserver(requestZoomLayoutSync);
+    resizeObserver.observe(container);
+
+    const mutationObserver =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver(() => {
+            requestZoomLayoutSync();
+          });
+    mutationObserver?.observe(container, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver?.disconnect();
+    };
   }, [containerRef, requestZoomLayoutSync, joined]);
 
   useEffect(() => {

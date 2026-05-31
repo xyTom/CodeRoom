@@ -198,6 +198,17 @@
     max-height: 100% !important;
   }
 
+  .zoom-ui-toolkit-root .uikit-main-content [style*="max-width"] {
+    max-width: 100% !important;
+  }
+
+  .zoom-ui-toolkit-root .uikit-main-content video,
+  .zoom-ui-toolkit-root .uikit-main-content canvas {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+  }
+
   .zoom-ui-toolkit-root #ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS,
   .zoom-ui-toolkit-root #ZOOM_VIDEO_SDK_SHARE_CANVAS,
   .zoom-ui-toolkit-root canvas[id*="SHARE"],
