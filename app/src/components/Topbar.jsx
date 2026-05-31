@@ -5,9 +5,6 @@ import { Button } from "@/components/ui/button";
 
 export function Topbar({ session }) {
   const roleText = session?.name ? `${session.role}: ${session.name}` : session?.role || "role";
-  const workspaceReady = Boolean(session?.workspace?.ready);
-  const workspaceAvailable = session?.role !== "candidate" || session?.room?.candidateAdmitted;
-  const workspaceText = workspaceReady && workspaceAvailable ? "workspace ready" : "workspace starting";
 
   return (
     <header className="relative z-20 bg-muted px-5 py-4 text-foreground">
@@ -23,7 +20,6 @@ export function Topbar({ session }) {
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
           <Badge>{roleText}</Badge>
-          <Badge variant={workspaceReady && workspaceAvailable ? "secondary" : "outline"}>{workspaceText}</Badge>
           <Button variant="outline" size="sm" asChild>
             <a href="/logout">
               <LogOut data-icon="inline-start" />

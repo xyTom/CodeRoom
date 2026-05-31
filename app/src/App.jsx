@@ -65,6 +65,7 @@ export function App() {
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomError, setZoomError] = useState("");
   const zoomContainerRef = useRef(null);
+  const zoomToolkitRef = useRef(null);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -157,6 +158,7 @@ export function App() {
         throw new Error("Zoom UI Toolkit did not load");
       }
 
+      zoomToolkitRef.current = uitoolkit;
       container.textContent = "";
       uitoolkit.joinSession(container, {
         videoSDKJWT: zoom.videoSDKJWT,
@@ -170,6 +172,7 @@ export function App() {
           chat: { enable: true },
           users: { enable: true },
           settings: { enable: true },
+          feedback: { enable: false },
         },
       });
 
@@ -178,6 +181,7 @@ export function App() {
       const closeSession = () => {
         setZoomJoined(false);
         setZoomVisible(false);
+        zoomToolkitRef.current = null;
       };
 
       if (typeof uitoolkit.onSessionClosed === "function") {
@@ -188,6 +192,7 @@ export function App() {
           if (typeof uitoolkit.destroy === "function") {
             uitoolkit.destroy();
           }
+          zoomToolkitRef.current = null;
         });
       }
     } catch (error) {
@@ -196,6 +201,30 @@ export function App() {
       setZoomError(`Could not start Zoom: ${error.message}`);
     } finally {
       setZoomLoading(false);
+    }
+  }
+
+  async function handleLeaveZoom() {
+    const uitoolkit = zoomToolkitRef.current;
+    const container = zoomContainerRef.current;
+
+    try {
+      if (uitoolkit && typeof uitoolkit.closeSession === "function") {
+        await uitoolkit.closeSession(container);
+      }
+      if (uitoolkit && typeof uitoolkit.destroy === "function") {
+        uitoolkit.destroy();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (container) {
+        container.textContent = "";
+      }
+      zoomToolkitRef.current = null;
+      setZoomJoined(false);
+      setZoomLoading(false);
+      setZoomVisible(false);
     }
   }
 
@@ -267,6 +296,7 @@ export function App() {
         joined={zoomJoined}
         containerRef={zoomContainerRef}
         onClose={() => setZoomVisible(false)}
+        onLeave={handleLeaveZoom}
       />
       <ZoomInviteBanner show={showInvite} invitedBy={session.room.zoomInviteBy} onJoin={handleJoinZoom} />
     </div>

@@ -57,7 +57,7 @@ export function ChatPanel({ messages, status, onSend }) {
             ))}
           </div>
         ) : (
-          <Empty className="h-full">
+          <Empty className="p-8">
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <MessageCircle />
@@ -68,7 +68,7 @@ export function ChatPanel({ messages, status, onSend }) {
           </Empty>
         )}
       </CardContent>
-      <CardFooter className="border-t bg-card">
+      <CardFooter className="border-t bg-card pb-5 pt-5">
         <form className="w-full" onSubmit={handleSubmit}>
           <FieldGroup className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
             <Field className="min-w-0">

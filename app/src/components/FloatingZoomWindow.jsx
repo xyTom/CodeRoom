@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Grip, Maximize2, Minimize2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Grip, Maximize2, Minimize2, PhoneOff, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -47,7 +47,52 @@ function readStoredBounds() {
   }
 }
 
-export function FloatingZoomWindow({ visible, loading, joined, containerRef, onClose }) {
+function syncZoomLayout(container) {
+  if (!container) {
+    return;
+  }
+
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  const root = container.querySelector(".zoom-ui-toolkit-root");
+
+  if (!root || width <= 0 || height <= 0) {
+    return;
+  }
+
+  const app = root.querySelector("#uikit-container-app");
+  const appInner = app?.firstElementChild;
+  const header = root.querySelector("#uikit-header");
+  const footer = root.querySelector("#zoom-ui-toolkit-controls");
+  const main = root.querySelector(".uikit-main-content");
+  const sidebar = main?.querySelector(".w-0.h-full");
+  const mainHeight = Math.max(0, height - (header?.offsetHeight || 0) - (footer?.offsetHeight || 0));
+
+  for (const element of [root, app, appInner].filter(Boolean)) {
+    element.style.width = "100%";
+    element.style.height = "100%";
+    element.style.minWidth = "0";
+    element.style.minHeight = "0";
+    element.style.maxWidth = "100%";
+    element.style.maxHeight = "100%";
+  }
+
+  if (main) {
+    main.style.width = `${width}px`;
+    main.style.height = `${mainHeight}px`;
+    main.style.minWidth = "0";
+    main.style.minHeight = "0";
+    main.style.maxWidth = "100%";
+  }
+
+  if (sidebar) {
+    sidebar.style.height = `${mainHeight}px`;
+  }
+
+  window.dispatchEvent(new Event("resize"));
+}
+
+export function FloatingZoomWindow({ visible, loading, joined, containerRef, onClose, onLeave }) {
   const [bounds, setBounds] = useState(readStoredBounds);
   const [expanded, setExpanded] = useState(false);
 
@@ -62,6 +107,29 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  const requestZoomLayoutSync = useCallback(() => {
+    requestAnimationFrame(() => {
+      syncZoomLayout(containerRef.current);
+    });
+  }, [containerRef]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new ResizeObserver(requestZoomLayoutSync);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef, requestZoomLayoutSync, joined]);
+
+  useEffect(() => {
+    if (visible) {
+      requestZoomLayoutSync();
+    }
+  }, [bounds, expanded, requestZoomLayoutSync, visible]);
 
   const style = useMemo(
     () =>
@@ -141,7 +209,7 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
     window.addEventListener("pointerup", onUp);
   }
 
-  if (!visible) {
+  if (!visible && !joined && !loading) {
     return null;
   }
 
@@ -151,8 +219,7 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
         "fixed z-[60] grid gap-0 overflow-hidden p-0 shadow-xl",
         expanded ? "grid-rows-[3rem_minmax(0,1fr)]" : "grid-rows-[3rem_minmax(0,1fr)]",
       )}
-      style={style}
-      hidden={!visible}
+      style={visible ? style : { ...style, display: "none" }}
     >
       <CardHeader className="grid-cols-[1fr_auto] cursor-move select-none border-b px-4 py-2" onPointerDown={startDrag}>
         <div className="min-w-0">
@@ -172,6 +239,11 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
           >
             {expanded ? <Minimize2 data-icon="inline-start" /> : <Maximize2 data-icon="inline-start" />}
           </Button>
+          {joined ? (
+            <Button variant="destructive" size="icon" type="button" title="Leave Zoom" aria-label="Leave Zoom" onClick={onLeave}>
+              <PhoneOff data-icon="inline-start" />
+            </Button>
+          ) : null}
           <Button variant="ghost" size="icon" type="button" title="Hide Zoom" aria-label="Hide Zoom" onClick={onClose}>
             <X data-icon="inline-start" />
           </Button>

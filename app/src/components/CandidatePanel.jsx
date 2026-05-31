@@ -1,15 +1,15 @@
 import { CircleCheck, Clock, UserPlus, Users } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
-export function CandidatePanel({ session, onAdmit, admitting }) {
+export function CandidatePanel({ session, onAdmit, admitting, fill = false }) {
   const room = session?.room;
   let status = "No candidate waiting yet.";
-  let statusTitle = "Lobby is quiet";
   let buttonText = "Waiting";
   let disabled = true;
   let statusLabel = "idle";
@@ -18,7 +18,6 @@ export function CandidatePanel({ session, onAdmit, admitting }) {
   if (room?.candidateAdmitted) {
     const names = room.candidateNames.length ? room.candidateNames.join(", ") : "Candidate";
     status = `${names} admitted. The workspace link is active for both sides.`;
-    statusTitle = "Candidate admitted";
     buttonText = "Admitted";
     statusLabel = "admitted";
     StatusIcon = CircleCheck;
@@ -28,7 +27,6 @@ export function CandidatePanel({ session, onAdmit, admitting }) {
       : "";
     const names = room.candidateNames.length ? room.candidateNames.join(", ") : "Candidate";
     status = `${names} waiting${seen ? ` since ${seen}` : ""}.`;
-    statusTitle = "Candidate waiting";
     buttonText = admitting ? "Admitting..." : "Admit candidate";
     disabled = admitting;
     statusLabel = "waiting";
@@ -36,7 +34,7 @@ export function CandidatePanel({ session, onAdmit, admitting }) {
   }
 
   return (
-    <Card className="shrink-0">
+    <Card className={cn(fill ? "h-full min-h-0" : "shrink-0")}>
       <CardHeader>
         <div>
           <CardTitle>Candidate</CardTitle>
@@ -49,15 +47,8 @@ export function CandidatePanel({ session, onAdmit, admitting }) {
       <CardContent className="flex flex-col gap-4">
         <Alert>
           <StatusIcon />
-          <AlertTitle>{statusTitle}</AlertTitle>
           <AlertDescription>{status}</AlertDescription>
         </Alert>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-muted-foreground">Workspace access</span>
-          <Badge variant={room?.candidateAdmitted ? "secondary" : "outline"}>
-            {room?.candidateAdmitted ? "active" : "locked"}
-          </Badge>
-        </div>
       </CardContent>
       <CardFooter className="flex-col items-stretch">
         <Button size="lg" type="button" disabled={disabled} onClick={onAdmit}>

@@ -1,10 +1,11 @@
 import { CircleOff, Radio, UserPlus, Video } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 export function ZoomPanel({
   session,
@@ -15,14 +16,16 @@ export function ZoomPanel({
   canInvite,
   onJoin,
   onInvite,
+  fill = false,
 }) {
   const isInterviewer = session?.role === "interviewer";
   const enabled = Boolean(session?.zoom?.enabled);
   const primaryText = joined ? "Show Zoom" : "Join Zoom";
   const StatusIcon = enabled ? Radio : CircleOff;
+  const showNotice = Boolean(notice && (!enabled || !joined || session?.role === "candidate"));
 
   return (
-    <Card className="shrink-0">
+    <Card className={cn(fill ? "h-full min-h-0" : "shrink-0")}>
       <CardHeader>
         <div>
           <CardTitle>Video room</CardTitle>
@@ -32,13 +35,14 @@ export function ZoomPanel({
           <Badge variant={enabled ? "secondary" : "outline"}>{enabled ? "enabled" : "offline"}</Badge>
         </CardAction>
       </CardHeader>
-      <CardContent>
-        <Alert>
-          <StatusIcon />
-          <AlertTitle>{joined ? "Zoom window open" : enabled ? "Ready to join" : "Zoom unavailable"}</AlertTitle>
-          <AlertDescription>{notice}</AlertDescription>
-        </Alert>
-      </CardContent>
+      {showNotice ? (
+        <CardContent>
+          <Alert>
+            <StatusIcon />
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
+        </CardContent>
+      ) : null}
       <CardFooter className="flex-col items-stretch gap-2">
         <Button size="lg" type="button" disabled={!canJoin || loading} onClick={onJoin}>
           {loading ? <Spinner data-icon="inline-start" /> : <Video data-icon="inline-start" />}

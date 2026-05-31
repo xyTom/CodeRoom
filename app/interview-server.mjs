@@ -11,8 +11,9 @@ const APP_PORT = Number(process.env.INTERVIEW_APP_PORT || "8080");
 const IDE_HOST = process.env.IDE_INTERNAL_HOST || "127.0.0.1";
 const IDE_PORT = Number(process.env.IDE_INTERNAL_PORT || "8081");
 const ROOM_PASSWORD = process.env.ROOM_PASSWORD || "";
-const INTERVIEWER_TOKEN = process.env.INTERVIEWER_TOKEN || "";
-const CANDIDATE_TOKEN = process.env.CANDIDATE_TOKEN || "";
+const DEV_AUTH_ENABLED = process.env.NODE_ENV !== "production";
+const INTERVIEWER_TOKEN = process.env.INTERVIEWER_TOKEN || (DEV_AUTH_ENABLED ? "dev-interviewer-token" : "");
+const CANDIDATE_TOKEN = process.env.CANDIDATE_TOKEN || (DEV_AUTH_ENABLED ? "dev-candidate-token" : "");
 const SESSION_NAME = process.env.INTERVIEW_SESSION_NAME || `coderoom-${Date.now()}`;
 const SESSION_DURATION_MINUTES = Number(process.env.SESSION_DURATION_MINUTES || "120");
 
@@ -92,9 +93,6 @@ function getRoleFromToken(token) {
   }
   if (CANDIDATE_TOKEN && timingSafeEqual(token, CANDIDATE_TOKEN)) {
     return "candidate";
-  }
-  if (!INTERVIEWER_TOKEN && !CANDIDATE_TOKEN && process.env.NODE_ENV !== "production") {
-    return "interviewer";
   }
   return null;
 }

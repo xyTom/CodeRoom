@@ -167,4 +167,33 @@
   .login-error {
     @apply mt-4 rounded-md border border-destructive/40 bg-background px-3 py-2 text-sm text-destructive;
   }
+
+  .zoom-ui-toolkit-root,
+  .zoom-ui-toolkit-root > *,
+  .zoom-ui-toolkit-root #uikit-container-app,
+  .zoom-ui-toolkit-root #uikit-container-app > * {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: 100% !important;
+  }
+
+  .zoom-ui-toolkit-root #uikit-container-app,
+  .zoom-ui-toolkit-root #uikit-container-app > * {
+    height: 100% !important;
+  }
+
+  .zoom-ui-toolkit-root .uikit-main-content {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .zoom-ui-toolkit-root video-player-container,
+  .zoom-ui-toolkit-root video-player {
+    max-width: 100% !important;
+  }
 }

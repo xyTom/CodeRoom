@@ -1,8 +1,8 @@
-import { UserRoundCheck } from "lucide-react";
+import { Clock } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 export function CandidateLobby({ session }) {
   return (
@@ -14,20 +14,15 @@ export function CandidateLobby({ session }) {
             <Badge variant="outline">candidate</Badge>
           </CardAction>
         </CardHeader>
-        <CardContent className="grid place-items-center">
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <UserRoundCheck />
-              </EmptyMedia>
-              <EmptyTitle>Waiting for interviewer approval</EmptyTitle>
-              <EmptyDescription>
-                {session?.room?.candidateAdmitted
-                  ? "Approved. Opening the workspace..."
-                  : "The interviewer has not admitted this candidate yet."}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+        <CardContent>
+          <Alert>
+            <Clock />
+            <AlertDescription>
+              {session?.room?.candidateAdmitted
+                ? "Approved. Opening the workspace..."
+                : "Waiting for interviewer approval."}
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     </main>
