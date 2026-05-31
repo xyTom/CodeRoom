@@ -67,6 +67,19 @@ function syncZoomLayout(container) {
   const main = root.querySelector(".uikit-main-content");
   const sidebar = main?.querySelector(".w-0.h-full");
   const mainHeight = Math.max(0, height - (header?.offsetHeight || 0) - (footer?.offsetHeight || 0));
+  const flexibleElements = root.querySelectorAll(
+    [
+      ".uikit-main-content > *",
+      "video-player-container",
+      "video-player",
+      "#uikit-whiteboard-container",
+      "#uikit-whiteboard-container-inner",
+      "#ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS",
+      "#ZOOM_VIDEO_SDK_SHARE_CANVAS",
+      "canvas[id*='SHARE']",
+      "[id*='share']",
+    ].join(","),
+  );
 
   for (const element of [root, app, appInner].filter(Boolean)) {
     element.style.width = "100%";
@@ -89,10 +102,24 @@ function syncZoomLayout(container) {
     sidebar.style.height = `${mainHeight}px`;
   }
 
+  for (const element of flexibleElements) {
+    element.style.minWidth = "0";
+    element.style.minHeight = "0";
+    element.style.maxWidth = "100%";
+    element.style.maxHeight = "100%";
+  }
+
+  for (const element of root.querySelectorAll("#ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS, #ZOOM_VIDEO_SDK_SHARE_CANVAS")) {
+    element.style.width = "100%";
+    element.style.height = "100%";
+    element.style.objectFit = "contain";
+  }
+
+  container.dispatchEvent(new Event("resize", { bubbles: true }));
   window.dispatchEvent(new Event("resize"));
 }
 
-export function FloatingZoomWindow({ visible, loading, joined, containerRef, onClose, onLeave }) {
+export function FloatingZoomWindow({ visible, loading, joined, mounted, containerRef, onClose, onLeave }) {
   const [bounds, setBounds] = useState(readStoredBounds);
   const [expanded, setExpanded] = useState(false);
 
@@ -111,6 +138,12 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
   const requestZoomLayoutSync = useCallback(() => {
     requestAnimationFrame(() => {
       syncZoomLayout(containerRef.current);
+      requestAnimationFrame(() => {
+        syncZoomLayout(containerRef.current);
+      });
+      window.setTimeout(() => {
+        syncZoomLayout(containerRef.current);
+      }, 120);
     });
   }, [containerRef]);
 
@@ -209,7 +242,7 @@ export function FloatingZoomWindow({ visible, loading, joined, containerRef, onC
     window.addEventListener("pointerup", onUp);
   }
 
-  if (!visible && !joined && !loading) {
+  if (!visible && !joined && !loading && !mounted) {
     return null;
   }
 

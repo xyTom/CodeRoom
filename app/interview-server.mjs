@@ -37,6 +37,7 @@ const roomState = {
   interviewerNames: new Set(),
   zoomInviteAt: null,
   zoomInviteBy: "",
+  zoomInviteByRole: "",
 };
 
 const APP_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -163,6 +164,7 @@ function serializeRoomState() {
     interviewerNames: Array.from(roomState.interviewerNames),
     zoomInviteAt: roomState.zoomInviteAt,
     zoomInviteBy: roomState.zoomInviteBy,
+    zoomInviteByRole: roomState.zoomInviteByRole,
   };
 }
 
@@ -573,6 +575,12 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (url.pathname === "/favicon.ico") {
+    res.writeHead(204, { "Cache-Control": "public, max-age=86400" });
+    res.end();
+    return;
+  }
+
   if (await serveStaticAsset(res, url.pathname)) {
     return;
   }
@@ -659,16 +667,13 @@ async function handleRequest(req, res) {
   }
 
   if (url.pathname === "/api/invite-zoom" && req.method === "POST") {
-    if (session.role !== "interviewer") {
-      sendJson(res, 403, { error: "interviewer role required" });
-      return;
-    }
     if (!ZOOM_VIDEO_SDK_KEY || !ZOOM_VIDEO_SDK_SECRET) {
       sendJson(res, 404, { error: "Zoom Video SDK is not configured" });
       return;
     }
     roomState.zoomInviteAt = new Date().toISOString();
-    roomState.zoomInviteBy = session.name || "Interviewer";
+    roomState.zoomInviteBy = session.name || (session.role === "interviewer" ? "Interviewer" : "Candidate");
+    roomState.zoomInviteByRole = session.role;
     const room = serializeRoomState();
     broadcast({ type: "room", room });
     sendJson(res, 200, { room });
@@ -676,14 +681,6 @@ async function handleRequest(req, res) {
   }
 
   if (url.pathname === "/api/zoom-session") {
-    if (session.role === "candidate" && !roomState.candidateAdmitted) {
-      sendJson(res, 403, { error: "candidate is waiting for admission" });
-      return;
-    }
-    if (session.role === "candidate" && !roomState.zoomInviteAt) {
-      sendJson(res, 403, { error: "candidate is waiting for Zoom invite" });
-      return;
-    }
     const videoSDKJWT = signZoomJwt(session.role, session.token);
     if (!videoSDKJWT) {
       sendJson(res, 404, { error: "Zoom Video SDK is not configured" });

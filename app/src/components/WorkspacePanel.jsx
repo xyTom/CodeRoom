@@ -1,20 +1,18 @@
 import { Monitor, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
 export function WorkspacePanel({ ready, available, title = "Workspace", revision, onReload }) {
   const showFrame = ready && available;
   const src = showFrame ? `/ide/?reload=${revision}` : "about:blank";
+  const emptyTitle = available ? "Workspace starting" : "Waiting for approval";
 
   return (
-    <Card className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+    <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
       <CardHeader>
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Shared code-server workspace</CardDescription>
-        </div>
+        <CardTitle>{title}</CardTitle>
         <CardAction>
           <Button variant="outline" size="icon-sm" type="button" onClick={onReload} disabled={!showFrame}>
             <RefreshCw />
@@ -29,8 +27,8 @@ export function WorkspacePanel({ ready, available, title = "Workspace", revision
               <EmptyMedia variant="icon">
                 <Monitor />
               </EmptyMedia>
-              <EmptyTitle>Workspace starting</EmptyTitle>
-              <EmptyDescription>code-server will open here when it is ready.</EmptyDescription>
+              <EmptyTitle>{emptyTitle}</EmptyTitle>
+              {available ? <EmptyDescription>code-server will open here when it is ready.</EmptyDescription> : null}
             </EmptyHeader>
           </Empty>
         )}

@@ -3,7 +3,7 @@ import { CircleCheck, Clock, UserPlus, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
@@ -34,24 +34,21 @@ export function CandidatePanel({ session, onAdmit, admitting, fill = false }) {
   }
 
   return (
-    <Card className={cn(fill ? "h-full min-h-0" : "shrink-0")}>
+    <Card size="sm" className={cn(fill ? "h-full min-h-0" : "shrink-0")}>
       <CardHeader>
-        <div>
-          <CardTitle>Candidate</CardTitle>
-          <CardDescription>Admission and workspace access</CardDescription>
-        </div>
+        <CardTitle>Candidate</CardTitle>
         <CardAction>
           <Badge variant={statusLabel === "admitted" ? "secondary" : "outline"}>{statusLabel}</Badge>
         </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-3">
         <Alert>
           <StatusIcon />
           <AlertDescription>{status}</AlertDescription>
         </Alert>
       </CardContent>
       <CardFooter className="flex-col items-stretch">
-        <Button size="lg" type="button" disabled={disabled} onClick={onAdmit}>
+        <Button type="button" disabled={disabled} onClick={onAdmit}>
           {admitting ? <Spinner data-icon="inline-start" /> : <UserPlus data-icon="inline-start" />}
           {buttonText}
         </Button>

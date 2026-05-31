@@ -7,7 +7,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 export function CandidateLobby({ session }) {
   return (
     <main className="grid min-h-0 place-items-center bg-muted p-5">
-      <Card className="min-h-72 w-full max-w-xl">
+      <Card size="sm" className="min-h-48 w-full max-w-xl">
         <CardHeader>
           <CardTitle>Waiting room</CardTitle>
           <CardAction>

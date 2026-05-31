@@ -6,9 +6,36 @@ import { WorkspacePanel } from "./WorkspacePanel.jsx";
 import { ZoomPanel } from "./ZoomPanel.jsx";
 
 const PANEL_HANDLE_SIZE = "1.25rem";
+const COLLAPSE_THRESHOLD = 80;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function clampPanelWidth(value, max) {
+  const width = clamp(value, 0, max);
+  return width < COLLAPSE_THRESHOLD ? 0 : width;
+}
+
+function clampShare(value) {
+  const share = clamp(value, 0, 100);
+  if (share < 8) {
+    return 0;
+  }
+  if (share > 92) {
+    return 100;
+  }
+  return share;
+}
+
+function verticalRows(firstShare) {
+  if (firstShare <= 0) {
+    return `0px ${PANEL_HANDLE_SIZE} minmax(0, 1fr)`;
+  }
+  if (firstShare >= 100) {
+    return `minmax(0, 1fr) ${PANEL_HANDLE_SIZE} 0px`;
+  }
+  return `${firstShare}% ${PANEL_HANDLE_SIZE} minmax(0, 1fr)`;
 }
 
 function beginResize(event, onDelta) {
@@ -55,11 +82,11 @@ function CandidateSideStack({ session, messages, chatStatus, onSendMessage, zoom
     <div
       className="grid h-full min-h-0 min-w-0"
       style={{
-        gridTemplateRows: `${zoomShare}% ${PANEL_HANDLE_SIZE} minmax(0, 1fr)`,
+        gridTemplateRows: verticalRows(zoomShare),
       }}
     >
       <section className="min-h-0 min-w-0 overflow-hidden">
-        <ZoomPanel session={session} {...zoomProps} fill />
+        {zoomShare > 0 ? <ZoomPanel session={session} {...zoomProps} fill /> : null}
       </section>
       <ResizeHandle
         orientation="horizontal"
@@ -69,7 +96,7 @@ function CandidateSideStack({ session, messages, chatStatus, onSendMessage, zoom
         }}
       />
       <section className="min-h-0 min-w-0 overflow-hidden">
-        <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} />
+        {zoomShare < 100 ? <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} /> : null}
       </section>
     </div>
   );
@@ -80,11 +107,11 @@ function InterviewerSideStack({ session, admitting, onAdmit, zoomProps, candidat
     <div
       className="grid h-full min-h-0 min-w-0"
       style={{
-        gridTemplateRows: `${candidateShare}% ${PANEL_HANDLE_SIZE} minmax(0, 1fr)`,
+        gridTemplateRows: verticalRows(candidateShare),
       }}
     >
       <section className="min-h-0 min-w-0 overflow-hidden">
-        <CandidatePanel session={session} onAdmit={onAdmit} admitting={admitting} fill />
+        {candidateShare > 0 ? <CandidatePanel session={session} onAdmit={onAdmit} admitting={admitting} fill /> : null}
       </section>
       <ResizeHandle
         orientation="horizontal"
@@ -94,7 +121,7 @@ function InterviewerSideStack({ session, admitting, onAdmit, zoomProps, candidat
         }}
       />
       <section className="min-h-0 min-w-0 overflow-hidden">
-        <ZoomPanel session={session} {...zoomProps} fill />
+        {candidateShare < 100 ? <ZoomPanel session={session} {...zoomProps} fill /> : null}
       </section>
     </div>
   );
@@ -113,11 +140,11 @@ export function CandidateRoom({
   const [zoomShare, setZoomShare] = useState(36);
 
   return (
-    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-5 pb-5 max-[900px]:overflow-auto">
+    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-4 pb-4 max-[900px]:overflow-auto">
       <div
         className="hidden h-full min-h-0 min-w-0 min-[901px]:grid"
         style={{
-          gridTemplateColumns: `minmax(32rem, 1fr) ${PANEL_HANDLE_SIZE} ${sideWidth}px`,
+          gridTemplateColumns: `minmax(0, 1fr) ${PANEL_HANDLE_SIZE} ${sideWidth}px`,
         }}
       >
         <section className="min-h-0 min-w-0 overflow-hidden">
@@ -132,7 +159,7 @@ export function CandidateRoom({
           orientation="vertical"
           onPointerDown={(event) => {
             const initial = sideWidth;
-            beginResize(event, (dx) => setSideWidth(clamp(initial - dx, 320, 560)));
+            beginResize(event, (dx) => setSideWidth(clampPanelWidth(initial - dx, 560)));
           }}
         />
         <aside className="min-h-0 min-w-0 overflow-hidden">
@@ -143,7 +170,7 @@ export function CandidateRoom({
             onSendMessage={onSendMessage}
             zoomProps={zoomProps}
             zoomShare={zoomShare}
-            onResizeZoom={(initial, dy) => setZoomShare(clamp(initial + dy / 4, 22, 68))}
+            onResizeZoom={(initial, dy) => setZoomShare(clampShare(initial + dy / 4))}
           />
         </aside>
       </div>
@@ -182,11 +209,11 @@ export function InterviewerRoom({
   const [candidateShare, setCandidateShare] = useState(42);
 
   return (
-    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-5 pb-5 max-[900px]:overflow-auto">
+    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-4 pb-4 max-[900px]:overflow-auto">
       <div
         className="hidden h-full min-h-0 min-w-0 min-[1181px]:grid"
         style={{
-          gridTemplateColumns: `${leftWidth}px ${PANEL_HANDLE_SIZE} minmax(34rem, 1fr) ${PANEL_HANDLE_SIZE} ${rightWidth}px`,
+          gridTemplateColumns: `${leftWidth}px ${PANEL_HANDLE_SIZE} minmax(0, 1fr) ${PANEL_HANDLE_SIZE} ${rightWidth}px`,
         }}
       >
         <aside className="min-h-0 min-w-0 overflow-hidden">
@@ -196,14 +223,14 @@ export function InterviewerRoom({
             onAdmit={onAdmit}
             zoomProps={zoomProps}
             candidateShare={candidateShare}
-            onResizeCandidate={(initial, dy) => setCandidateShare(clamp(initial + dy / 4, 24, 72))}
+            onResizeCandidate={(initial, dy) => setCandidateShare(clampShare(initial + dy / 4))}
           />
         </aside>
         <ResizeHandle
           orientation="vertical"
           onPointerDown={(event) => {
             const initial = leftWidth;
-            beginResize(event, (dx) => setLeftWidth(clamp(initial + dx, 300, 520)));
+            beginResize(event, (dx) => setLeftWidth(clampPanelWidth(initial + dx, 520)));
           }}
         />
         <section className="min-h-0 min-w-0 overflow-hidden">
@@ -213,7 +240,7 @@ export function InterviewerRoom({
           orientation="vertical"
           onPointerDown={(event) => {
             const initial = rightWidth;
-            beginResize(event, (dx) => setRightWidth(clamp(initial - dx, 320, 560)));
+            beginResize(event, (dx) => setRightWidth(clampPanelWidth(initial - dx, 560)));
           }}
         />
         <aside className="min-h-0 min-w-0 overflow-hidden">

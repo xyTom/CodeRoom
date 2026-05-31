@@ -3,8 +3,8 @@ import { MessageCircle, Send } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -33,12 +33,9 @@ export function ChatPanel({ messages, status, onSend }) {
   }
 
   return (
-    <Card className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
+    <Card size="sm" className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
       <CardHeader>
-        <div>
-          <CardTitle>Chat</CardTitle>
-          <CardDescription>Room messages</CardDescription>
-        </div>
+        <CardTitle>Chat</CardTitle>
         <CardAction>
           <Badge variant={status === "live" ? "secondary" : "outline"}>{status}</Badge>
         </CardAction>
@@ -63,12 +60,11 @@ export function ChatPanel({ messages, status, onSend }) {
                 <MessageCircle />
               </EmptyMedia>
               <EmptyTitle>No messages yet</EmptyTitle>
-              <EmptyDescription>Messages between interviewer and candidate will appear here.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         )}
       </CardContent>
-      <CardFooter className="border-t bg-card pb-5 pt-5">
+      <CardFooter className="border-t bg-card pb-4 pt-4">
         <form className="w-full" onSubmit={handleSubmit}>
           <FieldGroup className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
             <Field className="min-w-0">

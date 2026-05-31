@@ -8,7 +8,6 @@ import {
   sendMessage,
   subscribeRoomEvents,
 } from "./api.js";
-import { CandidateLobby } from "./components/CandidateLobby.jsx";
 import { FloatingZoomWindow } from "./components/FloatingZoomWindow.jsx";
 import { CandidateRoom, InterviewerRoom } from "./components/RoomLayouts.jsx";
 import { Topbar } from "./components/Topbar.jsx";
@@ -17,13 +16,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { loadZoomToolkit } from "./zoomToolkit.js";
 
 function canJoinZoom(session) {
-  if (!session?.zoom?.enabled) {
-    return false;
-  }
-  if (session.role === "candidate") {
-    return session.room.candidateAdmitted && Boolean(session.room.zoomInviteAt);
-  }
-  return true;
+  return Boolean(session?.zoom?.enabled);
 }
 
 function zoomNoticeFor(session, joined) {
@@ -31,27 +24,22 @@ function zoomNoticeFor(session, joined) {
     return "Zoom is not configured. Add ZOOM_VIDEO_SDK_KEY and ZOOM_VIDEO_SDK_SECRET to enable video.";
   }
 
-  if (session.role === "candidate") {
-    if (joined) {
-      return "Zoom is open in a floating window.";
-    }
-    if (session.room.zoomInviteAt) {
-      return "The interviewer invited you to join Zoom.";
-    }
-    return "Zoom will be available after the interviewer invites you.";
+  if (joined) {
+    return "Zoom is open in the floating window.";
   }
 
-  if (joined && session.room.zoomInviteAt) {
-    return "Zoom is open. Candidate invitation sent.";
+  if (session.room.zoomInviteAt && session.room.zoomInviteByRole !== session.role) {
+    return `Zoom invite from ${session.room.zoomInviteBy || "the other participant"}.`;
   }
-  if (joined) {
-    return "Zoom is open. Invite the candidate when ready.";
-  }
-  return "Join Zoom first, then invite the candidate.";
+  return "Join Zoom when ready, then invite the other participant.";
 }
 
 function waitForPaint() {
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function App() {
@@ -63,9 +51,94 @@ export function App() {
   const [zoomJoined, setZoomJoined] = useState(false);
   const [zoomLoading, setZoomLoading] = useState(false);
   const [zoomVisible, setZoomVisible] = useState(false);
+  const [zoomMounted, setZoomMounted] = useState(false);
   const [zoomError, setZoomError] = useState("");
   const zoomContainerRef = useRef(null);
   const zoomToolkitRef = useRef(null);
+  const zoomCallbacksRef = useRef(null);
+  const zoomCleanupTimerRef = useRef(null);
+  const zoomDestroyedRef = useRef(false);
+  const zoomSessionEndingRef = useRef(false);
+
+  const clearZoomCleanupTimer = useCallback(() => {
+    if (zoomCleanupTimerRef.current) {
+      window.clearTimeout(zoomCleanupTimerRef.current);
+      zoomCleanupTimerRef.current = null;
+    }
+  }, []);
+
+  const detachZoomListeners = useCallback((uitoolkit = zoomToolkitRef.current) => {
+    const callbacks = zoomCallbacksRef.current;
+    if (!uitoolkit || !callbacks) {
+      return;
+    }
+
+    try {
+      if (callbacks.sessionJoined && typeof uitoolkit.offSessionJoined === "function") {
+        uitoolkit.offSessionJoined(callbacks.sessionJoined);
+      }
+      if (callbacks.sessionClosed && typeof uitoolkit.offSessionClosed === "function") {
+        uitoolkit.offSessionClosed(callbacks.sessionClosed);
+      }
+      if (callbacks.sessionDestroyed && typeof uitoolkit.offSessionDestroyed === "function") {
+        uitoolkit.offSessionDestroyed(callbacks.sessionDestroyed);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      zoomCallbacksRef.current = null;
+    }
+  }, []);
+
+  const destroyZoomToolkit = useCallback((uitoolkit = zoomToolkitRef.current) => {
+    if (!uitoolkit || zoomDestroyedRef.current) {
+      return;
+    }
+
+    try {
+      if (typeof uitoolkit.destroy === "function") {
+        uitoolkit.destroy();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      zoomDestroyedRef.current = true;
+    }
+  }, []);
+
+  const finishZoomCleanup = useCallback(() => {
+    clearZoomCleanupTimer();
+    const uitoolkit = zoomToolkitRef.current;
+    const container = zoomContainerRef.current;
+
+    detachZoomListeners(uitoolkit);
+    destroyZoomToolkit(uitoolkit);
+    zoomToolkitRef.current = null;
+    zoomSessionEndingRef.current = false;
+
+    setZoomJoined(false);
+    setZoomLoading(false);
+    setZoomVisible(false);
+
+    requestAnimationFrame(() => {
+      if (container && zoomContainerRef.current === container) {
+        container.replaceChildren();
+      }
+      setZoomMounted(false);
+    });
+  }, [clearZoomCleanupTimer, destroyZoomToolkit, detachZoomListeners]);
+
+  const scheduleZoomCleanup = useCallback(
+    (delay = 1600) => {
+      zoomSessionEndingRef.current = true;
+      setZoomJoined(false);
+      setZoomLoading(false);
+      setZoomVisible(false);
+      clearZoomCleanupTimer();
+      zoomCleanupTimerRef.current = window.setTimeout(finishZoomCleanup, delay);
+    },
+    [clearZoomCleanupTimer, finishZoomCleanup],
+  );
 
   const refreshSession = useCallback(async () => {
     try {
@@ -100,6 +173,15 @@ export function App() {
     document.body.classList.toggle("zoom-enabled", Boolean(session?.zoom?.enabled));
     return () => document.body.classList.remove("zoom-enabled");
   }, [session?.zoom?.enabled]);
+
+  useEffect(
+    () => () => {
+      clearZoomCleanupTimer();
+      detachZoomListeners();
+      destroyZoomToolkit();
+    },
+    [clearZoomCleanupTimer, destroyZoomToolkit, detachZoomListeners],
+  );
 
   async function handleSendMessage(text) {
     try {
@@ -139,13 +221,22 @@ export function App() {
     if (!canJoinZoom(currentSession)) {
       return;
     }
-    if (zoomJoined) {
+    if (zoomJoined && !zoomSessionEndingRef.current) {
       setZoomVisible(true);
       return;
+    }
+    if (zoomSessionEndingRef.current) {
+      setZoomLoading(true);
+      await wait(1700);
+      if (zoomSessionEndingRef.current) {
+        finishZoomCleanup();
+        await waitForPaint();
+      }
     }
 
     setZoomLoading(true);
     setZoomError("");
+    setZoomMounted(true);
     setZoomVisible(true);
     await waitForPaint();
 
@@ -158,8 +249,25 @@ export function App() {
         throw new Error("Zoom UI Toolkit did not load");
       }
 
+      clearZoomCleanupTimer();
+      detachZoomListeners(uitoolkit);
       zoomToolkitRef.current = uitoolkit;
-      container.textContent = "";
+      zoomDestroyedRef.current = false;
+      zoomSessionEndingRef.current = false;
+      container.replaceChildren();
+
+      const sessionJoined = () => {
+        setZoomJoined(true);
+        setZoomLoading(false);
+        setZoomVisible(true);
+      };
+      const sessionClosed = () => {
+        scheduleZoomCleanup();
+      };
+      const sessionDestroyed = () => {
+        finishZoomCleanup();
+      };
+
       uitoolkit.joinSession(container, {
         videoSDKJWT: zoom.videoSDKJWT,
         sessionName: zoom.sessionName,
@@ -172,33 +280,27 @@ export function App() {
           chat: { enable: true },
           users: { enable: true },
           settings: { enable: true },
+          leave: { enable: true },
           feedback: { enable: false },
         },
       });
 
       setZoomJoined(true);
 
-      const closeSession = () => {
-        setZoomJoined(false);
-        setZoomVisible(false);
-        zoomToolkitRef.current = null;
-      };
-
+      zoomCallbacksRef.current = { sessionJoined, sessionClosed, sessionDestroyed };
+      if (typeof uitoolkit.onSessionJoined === "function") {
+        uitoolkit.onSessionJoined(sessionJoined);
+      }
       if (typeof uitoolkit.onSessionClosed === "function") {
-        uitoolkit.onSessionClosed(closeSession);
+        uitoolkit.onSessionClosed(sessionClosed);
       }
       if (typeof uitoolkit.onSessionDestroyed === "function") {
-        uitoolkit.onSessionDestroyed(() => {
-          if (typeof uitoolkit.destroy === "function") {
-            uitoolkit.destroy();
-          }
-          zoomToolkitRef.current = null;
-        });
+        uitoolkit.onSessionDestroyed(sessionDestroyed);
       }
     } catch (error) {
       console.error(error);
-      setZoomVisible(false);
       setZoomError(`Could not start Zoom: ${error.message}`);
+      finishZoomCleanup();
     } finally {
       setZoomLoading(false);
     }
@@ -208,24 +310,27 @@ export function App() {
     const uitoolkit = zoomToolkitRef.current;
     const container = zoomContainerRef.current;
 
+    zoomSessionEndingRef.current = true;
+    setZoomJoined(false);
+    setZoomLoading(false);
+    setZoomVisible(false);
+
+    if (!uitoolkit || !container) {
+      finishZoomCleanup();
+      return;
+    }
+
     try {
       if (uitoolkit && typeof uitoolkit.closeSession === "function") {
         await uitoolkit.closeSession(container);
-      }
-      if (uitoolkit && typeof uitoolkit.destroy === "function") {
-        uitoolkit.destroy();
+        scheduleZoomCleanup();
+        return;
       }
     } catch (error) {
       console.error(error);
-    } finally {
-      if (container) {
-        container.textContent = "";
-      }
-      zoomToolkitRef.current = null;
-      setZoomJoined(false);
-      setZoomLoading(false);
-      setZoomVisible(false);
     }
+
+    finishZoomCleanup();
   }
 
   const zoomProps = useMemo(() => {
@@ -235,7 +340,7 @@ export function App() {
       loading: zoomLoading,
       notice: zoomError || zoomNoticeFor(session, zoomJoined),
       canJoin: joinable,
-      canInvite: Boolean(session?.role === "interviewer" && zoomJoined && session.room.candidateAdmitted),
+      canInvite: Boolean(session?.zoom?.enabled && zoomJoined),
       onJoin: handleJoinZoom,
       onInvite: handleInviteZoom,
     };
@@ -253,20 +358,17 @@ export function App() {
     );
   }
 
-  const candidateWaiting = session.role === "candidate" && !session.room.candidateAdmitted;
   const showInvite =
     session.zoom.enabled &&
-    session.role === "candidate" &&
     Boolean(session.room.zoomInviteAt) &&
+    session.room.zoomInviteByRole !== session.role &&
     !zoomJoined;
 
   return (
     <div className="h-full min-h-0 bg-muted">
       <div className="grid h-screen min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
         <Topbar session={session} />
-        {candidateWaiting ? (
-          <CandidateLobby session={session} />
-        ) : session.role === "candidate" ? (
+        {session.role === "candidate" ? (
           <CandidateRoom
             session={session}
             messages={messages}
@@ -294,6 +396,7 @@ export function App() {
         visible={zoomVisible}
         loading={zoomLoading}
         joined={zoomJoined}
+        mounted={zoomMounted}
         containerRef={zoomContainerRef}
         onClose={() => setZoomVisible(false)}
         onLeave={handleLeaveZoom}
