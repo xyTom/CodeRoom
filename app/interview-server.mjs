@@ -352,13 +352,187 @@ function targetPathForIde(reqUrl) {
   return `${url.pathname.replace(/^\/ide(?=\/|$)/, "") || "/"}${url.search}`;
 }
 
-function rewriteProxyHeaders(headers) {
+function parseWorkspacePortProxy(reqUrl) {
+  const url = new URL(reqUrl, "http://coderoom.local");
+  const match = url.pathname.match(/^\/ide\/proxy\/(\d+)(\/.*)?$/);
+  if (!match) {
+    return null;
+  }
+
+  const port = Number(match[1]);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return null;
+  }
+
+  return {
+    port,
+    prefix: `/ide/proxy/${port}`,
+    path: `${match[2] || "/"}${url.search}`,
+  };
+}
+
+function rewriteCookiePath(value, prefix) {
+  const cookie = String(value);
+  if (/;\s*path=/i.test(cookie)) {
+    return cookie.replace(/;\s*path=\/([^;]*)/i, (_match, pathValue) => {
+      const suffix = pathValue ? `/${pathValue}`.replace(/\/+/g, "/") : "";
+      return `; Path=${prefix}${suffix}`;
+    });
+  }
+  return `${cookie}; Path=${prefix}`;
+}
+
+function rewriteLocationHeader(value, { prefix, targetPort } = {}) {
+  const location = String(value);
+  if (prefix && location.startsWith("/")) {
+    if (location === prefix || location.startsWith(`${prefix}/`)) {
+      return location;
+    }
+    if (location === `/proxy/${targetPort}` || location.startsWith(`/proxy/${targetPort}/`)) {
+      return `/ide${location}`;
+    }
+    return `${prefix}${location}`;
+  }
+
+  if (prefix) {
+    try {
+      const parsed = new URL(location);
+      const isTarget =
+        parsed.hostname === IDE_HOST ||
+        parsed.hostname === "127.0.0.1" ||
+        parsed.hostname === "localhost";
+      if (isTarget && Number(parsed.port) === targetPort) {
+        return `${prefix}${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+    } catch {
+      return location;
+    }
+  }
+
+  if (location.startsWith("/")) {
+    return `/ide${location}`;
+  }
+  return location;
+}
+
+function rewriteProxyHeaders(headers, proxy = null) {
   const rewritten = { ...headers };
-  if (rewritten.location && String(rewritten.location).startsWith("/")) {
-    rewritten.location = `/ide${rewritten.location}`;
+  if (rewritten.location) {
+    rewritten.location = rewriteLocationHeader(rewritten.location, proxy || undefined);
+  }
+  if (proxy && rewritten["set-cookie"]) {
+    const cookies = Array.isArray(rewritten["set-cookie"]) ? rewritten["set-cookie"] : [rewritten["set-cookie"]];
+    rewritten["set-cookie"] = cookies.map((cookie) => rewriteCookiePath(cookie, proxy.prefix));
   }
   delete rewritten["content-security-policy"];
   return rewritten;
+}
+
+function shouldRewritePortProxyBody(headers) {
+  if (headers["content-encoding"]) {
+    return false;
+  }
+  const contentType = String(headers["content-type"] || "").toLowerCase();
+  return (
+    contentType.includes("text/html") ||
+    contentType.includes("text/css") ||
+    contentType.includes("javascript")
+  );
+}
+
+function rewritePortProxyBody(body, proxy, contentType) {
+  const prefix = proxy.prefix;
+  const alreadyPrefixed = `ide/proxy/${proxy.port}(?:/|$)`;
+  let rewritten = body;
+
+  if (contentType.includes("text/html") && !/<base\s/i.test(rewritten)) {
+    rewritten = rewritten.replace(/<head(\s[^>]*)?>/i, (match) => `${match}<base href="${prefix}/">`);
+  }
+
+  rewritten = rewritten
+    .replace(
+      new RegExp(`(\\b(?:href|src|action)=(["']))/(?!/|${alreadyPrefixed})`, "gi"),
+      `$1${prefix}/`,
+    )
+    .replace(new RegExp(`url\\(\\s*(["']?)/(?!/|${alreadyPrefixed})`, "gi"), `url($1${prefix}/`)
+    .replace(new RegExp(`(["'\`])/(?!/|${alreadyPrefixed})`, "g"), `$1${prefix}/`);
+
+  return rewritten;
+}
+
+function stripRoomCookies(cookieHeader = "") {
+  return String(cookieHeader)
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part && !part.startsWith(`${COOKIE_NAME}=`) && !part.startsWith(`${NAME_COOKIE_NAME}=`))
+    .join("; ");
+}
+
+function workspacePortHeaders(req, portProxy) {
+  const headers = {
+    ...req.headers,
+    host: `${IDE_HOST}:${portProxy.port}`,
+    "x-forwarded-host": req.headers.host || "",
+    "x-forwarded-prefix": portProxy.prefix,
+    "x-forwarded-proto": req.headers["x-forwarded-proto"] || "https",
+    "x-forwarded-uri": req.url || "",
+    "accept-encoding": "identity",
+  };
+  const forwardedCookies = stripRoomCookies(req.headers.cookie);
+  if (forwardedCookies) {
+    headers.cookie = forwardedCookies;
+  } else {
+    delete headers.cookie;
+  }
+  return headers;
+}
+
+function proxyWorkspacePortRequest(req, res, portProxy) {
+  const proxyReq = http.request(
+    {
+      hostname: IDE_HOST,
+      port: portProxy.port,
+      method: req.method,
+      path: portProxy.path,
+      headers: workspacePortHeaders(req, portProxy),
+    },
+    (proxyRes) => {
+      const headers = rewriteProxyHeaders(proxyRes.headers, {
+        prefix: portProxy.prefix,
+        targetPort: portProxy.port,
+      });
+      const statusCode = proxyRes.statusCode || 502;
+      const contentType = String(proxyRes.headers["content-type"] || "").toLowerCase();
+
+      if (!shouldRewritePortProxyBody(proxyRes.headers)) {
+        res.writeHead(statusCode, headers);
+        proxyRes.pipe(res);
+        return;
+      }
+
+      const chunks = [];
+      proxyRes.on("data", (chunk) => chunks.push(chunk));
+      proxyRes.on("end", () => {
+        const body = Buffer.concat(chunks).toString("utf8");
+        const rewritten = rewritePortProxyBody(body, portProxy, contentType);
+        const responseHeaders = {
+          ...headers,
+          "content-length": Buffer.byteLength(rewritten),
+        };
+        delete responseHeaders["content-encoding"];
+        delete responseHeaders["transfer-encoding"];
+        res.writeHead(statusCode, responseHeaders);
+        res.end(rewritten);
+      });
+    },
+  );
+
+  proxyReq.on("error", () => {
+    send(res, 502, `Workspace port ${portProxy.port} is not ready yet.`, {
+      "Content-Type": "text/plain; charset=utf-8",
+    });
+  });
+  req.pipe(proxyReq);
 }
 
 function proxyIdeRequest(req, res) {
@@ -389,6 +563,27 @@ function proxyIdeRequest(req, res) {
   req.pipe(proxyReq);
 }
 
+function proxyWorkspacePortUpgrade(req, socket, head, portProxy) {
+  const targetSocket = net.connect(portProxy.port, IDE_HOST, () => {
+    const headers = workspacePortHeaders(req, portProxy);
+    const headerLines = Object.entries(headers)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\r\n");
+
+    targetSocket.write(`${req.method} ${portProxy.path} HTTP/${req.httpVersion}\r\n${headerLines}\r\n\r\n`);
+    if (head?.length) {
+      targetSocket.write(head);
+    }
+    socket.pipe(targetSocket).pipe(socket);
+  });
+
+  targetSocket.on("error", () => {
+    socket.write("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n");
+    socket.destroy();
+  });
+}
+
 function proxyIdeUpgrade(req, socket, head) {
   const reqUrl = req.url || "";
   const url = new URL(reqUrl, "http://coderoom.local");
@@ -408,6 +603,12 @@ function proxyIdeUpgrade(req, socket, head) {
   if (session.role === "candidate" && !roomState.candidateAdmitted) {
     socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
     socket.destroy();
+    return;
+  }
+
+  const portProxy = parseWorkspacePortProxy(req.url);
+  if (portProxy) {
+    proxyWorkspacePortUpgrade(req, socket, head, portProxy);
     return;
   }
 
@@ -749,6 +950,11 @@ async function handleRequest(req, res) {
   if (url.pathname === "/ide" || url.pathname.startsWith("/ide/")) {
     if (session.role === "candidate" && !roomState.candidateAdmitted) {
       send(res, 403, "Waiting for interviewer approval.\n", { "Content-Type": "text/plain; charset=utf-8" });
+      return;
+    }
+    const portProxy = parseWorkspacePortProxy(req.url);
+    if (portProxy) {
+      proxyWorkspacePortRequest(req, res, portProxy);
       return;
     }
     proxyIdeRequest(req, res);
