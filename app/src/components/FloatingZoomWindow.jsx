@@ -98,6 +98,43 @@ function resizeMediaElement(element, fallbackRect) {
   }
 }
 
+function activeShareElements(root) {
+  return Array.from(
+    root.querySelectorAll(
+      "#ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS, #ZOOM_VIDEO_SDK_SHARE_CANVAS, canvas[id*='SHARE'], canvas[id*='share'], video[aria-label*='share' i]",
+    ),
+  ).filter((element) => {
+    const style = getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
+  });
+}
+
+function expandActiveShare(root, main) {
+  if (!main) {
+    return;
+  }
+
+  const shareElements = activeShareElements(root);
+  if (!shareElements.length) {
+    return;
+  }
+
+  for (const shareElement of shareElements) {
+    let element = shareElement;
+    while (element && element !== main && element !== root) {
+      fitMediaShell(element);
+      setStyle(element, "width", "100%");
+      setStyle(element, "height", "100%");
+      setStyle(element, "flex", "1 1 auto");
+      if (element.classList.contains("react-draggable")) {
+        setStyle(element, "transform", "none");
+      }
+      element = element.parentElement;
+    }
+    resizeMediaElement(shareElement, main.getBoundingClientRect());
+  }
+}
+
 function syncZoomLayout(container) {
   if (!container) {
     return;
@@ -105,7 +142,9 @@ function syncZoomLayout(container) {
 
   const width = container.clientWidth;
   const height = container.clientHeight;
-  const root = container.querySelector(".zoom-ui-toolkit-root");
+  const root = container.classList.contains("zoom-ui-toolkit-root")
+    ? container
+    : container.querySelector(".zoom-ui-toolkit-root");
 
   if (!root || width <= 0 || height <= 0) {
     return;
@@ -184,6 +223,7 @@ function syncZoomLayout(container) {
   for (const element of root.querySelectorAll("canvas, video")) {
     resizeMediaElement(element, stageRect);
   }
+  expandActiveShare(root, main);
 
   container.dispatchEvent(new Event("resize", { bubbles: true }));
   window.dispatchEvent(new Event("resize"));
