@@ -5,7 +5,7 @@ import { ChatPanel } from "./ChatPanel.jsx";
 import { WorkspacePanel } from "./WorkspacePanel.jsx";
 import { ZoomPanel } from "./ZoomPanel.jsx";
 
-const PANEL_HANDLE_SIZE = "0.875rem";
+const PANEL_HANDLE_SIZE = "0.75rem";
 const COLLAPSE_THRESHOLD = 72;
 
 function clamp(value, min, max) {
@@ -147,7 +147,7 @@ export function CandidateRoom({
   const [zoomShare, setZoomShare] = useState(38);
 
   return (
-    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-3 pb-3 max-[900px]:overflow-auto max-[900px]:px-4 max-[900px]:pb-4">
+    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-2 pb-2 max-[900px]:overflow-auto max-[900px]:px-3 max-[900px]:pb-3">
       <div
         className="hidden h-full min-h-0 min-w-0 min-[901px]:grid"
         style={{
@@ -182,7 +182,7 @@ export function CandidateRoom({
         </aside>
       </div>
 
-      <div className="grid min-h-0 min-w-0 grid-cols-1 gap-4 min-[901px]:hidden">
+      <div className="grid min-h-0 min-w-0 grid-cols-1 gap-3 min-[901px]:hidden">
         <section className="min-h-[70vh] min-w-0">
           <WorkspacePanel
             ready={session.workspace.ready}
@@ -191,7 +191,7 @@ export function CandidateRoom({
             onReload={onReloadWorkspace}
           />
         </section>
-        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto">
+        <aside className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto">
           <ZoomPanel session={session} {...zoomProps} />
           <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} />
         </aside>
@@ -216,7 +216,7 @@ export function InterviewerRoom({
   const [candidateShare, setCandidateShare] = useState(40);
 
   return (
-    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-3 pb-3 max-[900px]:overflow-auto max-[900px]:px-4 max-[900px]:pb-4">
+    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-2 pb-2 max-[900px]:overflow-auto max-[900px]:px-3 max-[900px]:pb-3">
       <div
         className="hidden h-full min-h-0 min-w-0 min-[1181px]:grid"
         style={{
@@ -255,8 +255,8 @@ export function InterviewerRoom({
         </aside>
       </div>
 
-      <div className="grid min-h-0 min-w-0 grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(19rem,34vh)] gap-4 min-[1181px]:hidden max-[900px]:grid-cols-1 max-[900px]:grid-rows-none">
-        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto max-[900px]:row-auto">
+      <div className="grid min-h-0 min-w-0 grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(19rem,34vh)] gap-3 min-[1181px]:hidden max-[900px]:grid-cols-1 max-[900px]:grid-rows-none">
+        <aside className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto max-[900px]:row-auto">
           <CandidatePanel session={session} onAdmit={onAdmit} admitting={admitting} />
           <ZoomPanel session={session} {...zoomProps} />
         </aside>
