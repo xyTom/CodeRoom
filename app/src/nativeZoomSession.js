@@ -1,5 +1,67 @@
 const SDK_CDN_PREFIX = "https://source.zoom.us/videosdk";
 const VIDEO_QUALITY_720P = 3;
+const ICON_NODES = {
+  mic: [
+    ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" }],
+    ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2" }],
+    ["line", { x1: "12", x2: "12", y1: "19", y2: "22" }],
+  ],
+  "mic-off": [
+    ["line", { x1: "2", x2: "22", y1: "2", y2: "22" }],
+    ["path", { d: "M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" }],
+    ["path", { d: "M5 10v2a7 7 0 0 0 12 5" }],
+    ["path", { d: "M15 9.34V5a3 3 0 0 0-5.68-1.33" }],
+    ["path", { d: "M9 9v3a3 3 0 0 0 5.12 2.12" }],
+    ["line", { x1: "12", x2: "12", y1: "19", y2: "22" }],
+  ],
+  video: [
+    ["path", { d: "m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" }],
+    ["rect", { x: "2", y: "6", width: "14", height: "12", rx: "2" }],
+  ],
+  "video-off": [
+    ["path", { d: "M10.66 6H14a2 2 0 0 1 2 2v2.5l5.248-3.062A.5.5 0 0 1 22 7.87v8.196" }],
+    ["path", { d: "M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2" }],
+    ["path", { d: "m2 2 20 20" }],
+  ],
+  "screen-share": [
+    ["path", { d: "M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3" }],
+    ["path", { d: "M8 21h8" }],
+    ["path", { d: "M12 17v4" }],
+    ["path", { d: "m17 8 5-5" }],
+    ["path", { d: "M17 3h5v5" }],
+  ],
+  "screen-share-off": [
+    ["path", { d: "M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3" }],
+    ["path", { d: "M8 21h8" }],
+    ["path", { d: "M12 17v4" }],
+    ["path", { d: "m22 3-5 5" }],
+    ["path", { d: "m17 3 5 5" }],
+  ],
+  pause: [
+    ["rect", { x: "14", y: "4", width: "4", height: "16", rx: "1" }],
+    ["rect", { x: "6", y: "4", width: "4", height: "16", rx: "1" }],
+  ],
+  play: [["polygon", { points: "6 3 20 12 6 21 6 3" }]],
+  film: [
+    ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }],
+    ["path", { d: "M7 3v18" }],
+    ["path", { d: "M3 7.5h4" }],
+    ["path", { d: "M3 12h18" }],
+    ["path", { d: "M3 16.5h4" }],
+    ["path", { d: "M17 3v18" }],
+    ["path", { d: "M17 7.5h4" }],
+    ["path", { d: "M17 16.5h4" }],
+  ],
+  "phone-off": [
+    [
+      "path",
+      {
+        d: "M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91",
+      },
+    ],
+    ["line", { x1: "22", x2: "2", y1: "2", y2: "22" }],
+  ],
+};
 
 let sdkPromise = null;
 
@@ -50,12 +112,43 @@ async function loadZoomVideoSdk(version) {
   return ZoomVideo;
 }
 
-function appendButton(parent, className, text, title) {
+function createIcon(iconName, className = "zoom-native-button-icon") {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add(...className.split(" ").filter(Boolean));
+
+  for (const [tag, attrs] of ICON_NODES[iconName] || []) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      node.setAttribute(key, String(value));
+    }
+    svg.appendChild(node);
+  }
+
+  return svg;
+}
+
+function setButtonVisual(button, label, iconName, state = "") {
+  const labelNode = document.createElement("span");
+  labelNode.className = "zoom-native-button-label";
+  labelNode.textContent = label;
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.dataset.state = state;
+  button.replaceChildren(createIcon(iconName), labelNode);
+}
+
+function appendButton(parent, className, text, title, iconName) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = className;
-  button.textContent = text;
-  button.title = title || text;
+  setButtonVisual(button, title || text, iconName);
   parent.appendChild(button);
   return button;
 }
@@ -91,7 +184,23 @@ function createNativeZoomUi(container, zoom) {
 
   const empty = document.createElement("div");
   empty.className = "zoom-native-empty";
-  empty.textContent = "Zoom connected";
+  empty.setAttribute("aria-live", "polite");
+
+  const emptyCard = document.createElement("div");
+  emptyCard.className = "zoom-native-empty-card";
+
+  const emptyIcon = createIcon("film", "zoom-native-empty-icon");
+
+  const emptyTitle = document.createElement("div");
+  emptyTitle.className = "zoom-native-empty-title";
+  emptyTitle.textContent = "Zoom connected";
+
+  const emptyDescription = document.createElement("div");
+  emptyDescription.className = "zoom-native-empty-description";
+  emptyDescription.textContent = "Waiting for cameras or screen share.";
+
+  emptyCard.append(emptyIcon, emptyTitle, emptyDescription);
+  empty.appendChild(emptyCard);
 
   const shareStage = document.createElement("div");
   shareStage.className = "zoom-native-share-stage";
@@ -124,11 +233,36 @@ function createNativeZoomUi(container, zoom) {
   shareHint.className = "zoom-native-share-hint";
   shareHint.hidden = true;
 
+  const shareControlBar = document.createElement("div");
+  shareControlBar.className = "zoom-native-share-control-bar";
+  shareControlBar.hidden = true;
+
+  const shareControlText = document.createElement("span");
+  shareControlText.className = "zoom-native-share-control-text";
+  shareControlText.textContent = "Sharing screen";
+  shareControlBar.appendChild(shareControlText);
+
+  const sharePauseButton = appendButton(
+    shareControlBar,
+    "zoom-native-share-control-button",
+    "Pause share",
+    "Pause share",
+    "pause",
+  );
+  const shareStopButton = appendButton(
+    shareControlBar,
+    "zoom-native-share-control-button zoom-native-share-control-stop",
+    "Stop share",
+    "Stop share",
+    "screen-share-off",
+  );
+
   const videoContainer = document.createElement("video-player-container");
   videoContainer.className = "zoom-native-video-grid";
+  videoContainer.dataset.count = "0";
   videoContainer.hidden = true;
 
-  shareStage.append(shareVideo, shareCanvas, remoteShareContainer, shareHint);
+  shareStage.append(shareVideo, shareCanvas, remoteShareContainer, shareHint, shareControlBar);
   stage.append(empty, shareStage, videoContainer);
 
   const footer = document.createElement("div");
@@ -141,15 +275,20 @@ function createNativeZoomUi(container, zoom) {
   const controls = document.createElement("div");
   controls.className = "zoom-native-button-row";
 
-  const audioButton = appendButton(controls, "zoom-native-button", "Join audio", "Join audio");
-  const videoButton = appendButton(controls, "zoom-native-button", "Start video", "Start video");
-  const shareButton = appendButton(controls, "zoom-native-button", "Share", "Share screen");
-  const pauseShareButton = appendButton(controls, "zoom-native-button", "Pause", "Pause screen share");
-  const optimizeShareButton = appendButton(controls, "zoom-native-button", "Optimize video", "Optimize shared video");
-  const leaveButton = appendButton(controls, "zoom-native-button zoom-native-button-danger", "Leave", "Leave Zoom");
+  const audioButton = appendButton(controls, "zoom-native-button", "Join audio", "Join audio", "mic");
+  const videoButton = appendButton(controls, "zoom-native-button", "Start video", "Start video", "video-off");
+  const shareButton = appendButton(controls, "zoom-native-button", "Share screen", "Share screen", "screen-share");
+  const optimizeShareButton = appendButton(
+    controls,
+    "zoom-native-button",
+    "Optimize video",
+    "Optimize shared video",
+    "film",
+  );
+  const leaveButton = appendButton(controls, "zoom-native-button zoom-native-button-danger", "Leave Zoom", "Leave Zoom", "phone-off");
 
-  pauseShareButton.hidden = true;
   optimizeShareButton.hidden = true;
+
   footer.append(status, controls);
   root.append(stage, footer);
   container.appendChild(root);
@@ -165,12 +304,17 @@ function createNativeZoomUi(container, zoom) {
     remoteShareViewport,
     remoteSharePlayer,
     shareHint,
+    shareControlBar,
+    shareControlText,
+    sharePauseButton,
+    shareStopButton,
     videoContainer,
+    emptyTitle,
+    emptyDescription,
     status,
     audioButton,
     videoButton,
     shareButton,
-    pauseShareButton,
     optimizeShareButton,
     leaveButton,
   };
@@ -187,8 +331,16 @@ function createVideoTile(userId, displayName) {
   name.className = "zoom-native-video-name";
   name.textContent = displayName || `User ${userId}`;
 
-  tile.append(player, name);
-  return { tile, player, name };
+  const meta = document.createElement("div");
+  meta.className = "zoom-native-video-meta";
+
+  const status = document.createElement("span");
+  status.className = "zoom-native-video-status";
+  status.textContent = "Camera on";
+
+  meta.append(name, status);
+  tile.append(player, meta);
+  return { tile, player, name, status };
 }
 
 function setStageMode(ui, mode) {
@@ -334,8 +486,14 @@ function audioStartOptions() {
 function setActiveTile(state, userId) {
   state.activeVideoUserId = userId || null;
   for (const [tileUserId, item] of state.videoTiles) {
-    item.tile.classList.toggle("zoom-native-video-tile-active", Boolean(userId && tileUserId === userId));
+    const active = Boolean(userId && tileUserId === userId);
+    item.tile.classList.toggle("zoom-native-video-tile-active", active);
+    item.status.textContent = active ? "Speaking" : "Camera on";
   }
+}
+
+function updateVideoGridState(ui, state) {
+  ui.videoContainer.dataset.count = String(state.videoTiles.size);
 }
 
 function reportZoomStatus(ui, callbacks, message) {
@@ -372,25 +530,62 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
   const stream = client.getMediaStream();
 
   function updateShareButtons() {
-    ui.shareButton.textContent = state.sharing ? "Stop share" : "Share";
-    ui.pauseShareButton.hidden = !state.sharing;
-    ui.pauseShareButton.textContent = state.sharePaused ? "Resume" : "Pause";
+    setButtonVisual(
+      ui.shareButton,
+      state.sharing ? "Stop share" : "Share screen",
+      state.sharing ? "screen-share-off" : "screen-share",
+      state.sharing ? "active" : "",
+    );
+    ui.shareControlBar.hidden = !state.sharing;
+    ui.shareControlText.textContent = state.sharePaused ? "Sharing paused" : "Sharing screen";
+    if (state.sharing) {
+      ui.shareHint.hidden = false;
+      ui.shareHint.textContent = state.sharePaused ? "Screen share paused" : "You are sharing your screen";
+    }
+    setButtonVisual(
+      ui.sharePauseButton,
+      state.sharePaused ? "Resume share" : "Pause share",
+      state.sharePaused ? "play" : "pause",
+    );
+    setButtonVisual(ui.shareStopButton, "Stop share", "screen-share-off");
     ui.optimizeShareButton.hidden =
       !state.sharing ||
       typeof stream.isSupportOptimizedForSharedVideo !== "function" ||
       !stream.isSupportOptimizedForSharedVideo();
-    ui.optimizeShareButton.textContent = state.optimizedShare ? "Video optimized" : "Optimize video";
+    setButtonVisual(
+      ui.optimizeShareButton,
+      state.optimizedShare ? "Video optimized" : "Optimize video",
+      "film",
+      state.optimizedShare ? "active" : "",
+    );
   }
 
   function updateAudioButton() {
     const currentUser = client.getCurrentUserInfo?.() || {};
-    ui.audioButton.textContent = state.audioJoined && !currentUser.muted ? "Mute" : state.audioJoined ? "Unmute" : "Join audio";
+    if (!state.audioJoined) {
+      setButtonVisual(ui.audioButton, "Join audio", "mic");
+    } else if (currentUser.muted) {
+      setButtonVisual(ui.audioButton, "Unmute", "mic-off", "muted");
+    } else {
+      setButtonVisual(ui.audioButton, "Mute", "mic", "active");
+    }
+  }
+
+  function updateVideoButton() {
+    setButtonVisual(
+      ui.videoButton,
+      state.videoStarted ? "Stop video" : "Start video",
+      state.videoStarted ? "video" : "video-off",
+      state.videoStarted ? "active" : "muted",
+    );
   }
 
   function updateParticipants() {
     const users = getUsers(client);
     ui.status.textContent = `${zoom.sessionName || "Zoom session"} · ${users.length || 1} participant${users.length === 1 ? "" : "s"}`;
-    ui.empty.textContent = users.length > 1 ? "No screen share active" : "Waiting for the other participant";
+    ui.emptyTitle.textContent = users.length > 1 ? "No screen share active" : "Waiting for the other participant";
+    ui.emptyDescription.textContent =
+      users.length > 1 ? "Start video or share your screen to bring the stage to life." : "You are connected. The other participant will appear here when they join.";
 
     for (const [userId, item] of state.videoTiles) {
       item.name.textContent = userName(client, userId);
@@ -409,6 +604,7 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
     const item = createVideoTile(userId, userName(client, userId));
     ui.videoContainer.appendChild(item.tile);
     state.videoTiles.set(userId, item);
+    updateVideoGridState(ui, state);
 
     try {
       const result = await attachWithFallback(
@@ -430,6 +626,7 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
       console.error(error);
       item.tile.remove();
       state.videoTiles.delete(userId);
+      updateVideoGridState(ui, state);
     }
   }
 
@@ -441,6 +638,7 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
     }
     state.videoTiles.get(userId)?.tile?.remove?.();
     state.videoTiles.delete(userId);
+    updateVideoGridState(ui, state);
     if (!state.activeShareUserId && !state.sharing && state.videoTiles.size === 0) {
       setStageMode(ui, "empty");
     }
@@ -566,11 +764,11 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
         await stream.stopVideo();
         await detachVideo(userId);
         state.videoStarted = false;
-        ui.videoButton.textContent = "Start video";
+        updateVideoButton();
       } else {
         await attachWithFallback(() => stream.startVideo(videoStartOptions(stream)), () => stream.startVideo());
         state.videoStarted = true;
-        ui.videoButton.textContent = "Stop video";
+        updateVideoButton();
         await attachVideo(userId);
       }
     } catch (error) {
@@ -585,6 +783,7 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
         await stream.stopShareScreen();
         state.sharing = false;
         state.sharePaused = false;
+        state.optimizedShare = false;
         ui.shareVideo.hidden = true;
         ui.shareCanvas.hidden = true;
         ui.shareHint.hidden = true;
@@ -599,7 +798,7 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
       }
       ui.remoteShareContainer.hidden = true;
       ui.shareHint.hidden = false;
-      ui.shareHint.textContent = "You are sharing your screen";
+      ui.shareHint.textContent = "Choose a screen or window to share";
       setStageMode(ui, "share");
       fitShareTargets(ui, stream, state);
 
@@ -622,6 +821,8 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
     } catch (error) {
       state.sharing = false;
       state.sharePaused = false;
+      state.optimizedShare = false;
+      ui.shareHint.hidden = true;
       updateShareButtons();
       console.error(error);
       callbacks.onError?.(error);
@@ -677,7 +878,8 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
     ui.audioButton.removeEventListener("click", toggleAudio);
     ui.videoButton.removeEventListener("click", toggleVideo);
     ui.shareButton.removeEventListener("click", toggleShare);
-    ui.pauseShareButton.removeEventListener("click", toggleSharePause);
+    ui.sharePauseButton.removeEventListener("click", toggleSharePause);
+    ui.shareStopButton.removeEventListener("click", toggleShare);
     ui.optimizeShareButton.removeEventListener("click", toggleOptimizeShare);
     ui.leaveButton.removeEventListener("click", leave);
 
@@ -800,6 +1002,7 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
   addListener("passively-stop-share", () => {
     state.sharing = false;
     state.sharePaused = false;
+    state.optimizedShare = false;
     ui.shareVideo.hidden = true;
     ui.shareCanvas.hidden = true;
     ui.shareHint.hidden = true;
@@ -822,13 +1025,15 @@ export async function startNativeZoomSession(container, zoom, callbacks = {}) {
   ui.audioButton.addEventListener("click", toggleAudio);
   ui.videoButton.addEventListener("click", toggleVideo);
   ui.shareButton.addEventListener("click", toggleShare);
-  ui.pauseShareButton.addEventListener("click", toggleSharePause);
+  ui.sharePauseButton.addEventListener("click", toggleSharePause);
+  ui.shareStopButton.addEventListener("click", toggleShare);
   ui.optimizeShareButton.addEventListener("click", toggleOptimizeShare);
   ui.leaveButton.addEventListener("click", leave);
 
   setStageMode(ui, "empty");
   updateParticipants();
   updateAudioButton();
+  updateVideoButton();
   updateShareButtons();
   for (const user of getUsers(client)) {
     if (user.bVideoOn) {

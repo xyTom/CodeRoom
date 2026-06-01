@@ -5,8 +5,8 @@ import { ChatPanel } from "./ChatPanel.jsx";
 import { WorkspacePanel } from "./WorkspacePanel.jsx";
 import { ZoomPanel } from "./ZoomPanel.jsx";
 
-const PANEL_HANDLE_SIZE = "1.25rem";
-const COLLAPSE_THRESHOLD = 80;
+const PANEL_HANDLE_SIZE = "0.875rem";
+const COLLAPSE_THRESHOLD = 72;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -63,16 +63,23 @@ function ResizeHandle({ orientation, onPointerDown }) {
 
   return (
     <div
+      aria-label={isVertical ? "Resize side panel" : "Resize stacked panels"}
       aria-orientation={isVertical ? "vertical" : "horizontal"}
       className={
         isVertical
-          ? "grid min-h-0 cursor-col-resize place-items-center"
-          : "grid min-w-0 cursor-row-resize place-items-center"
+          ? "group grid min-h-0 cursor-col-resize place-items-center px-1 transition-colors hover:bg-muted/60 active:bg-muted"
+          : "group grid min-w-0 cursor-row-resize place-items-center py-1 transition-colors hover:bg-muted/60 active:bg-muted"
       }
       role="separator"
       onPointerDown={onPointerDown}
     >
-      <div className={isVertical ? "h-16 w-px rounded-full bg-border" : "h-px w-16 rounded-full bg-border"} />
+      <div
+        className={
+          isVertical
+            ? "h-14 w-1 rounded-full bg-border transition-colors group-hover:bg-primary/40"
+            : "h-1 w-14 rounded-full bg-border transition-colors group-hover:bg-primary/40"
+        }
+      />
     </div>
   );
 }
@@ -136,11 +143,11 @@ export function CandidateRoom({
   onSendMessage,
   zoomProps,
 }) {
-  const [sideWidth, setSideWidth] = useState(390);
-  const [zoomShare, setZoomShare] = useState(36);
+  const [sideWidth, setSideWidth] = useState(372);
+  const [zoomShare, setZoomShare] = useState(38);
 
   return (
-    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-4 pb-4 max-[900px]:overflow-auto">
+    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-3 pb-3 max-[900px]:overflow-auto max-[900px]:px-4 max-[900px]:pb-4">
       <div
         className="hidden h-full min-h-0 min-w-0 min-[901px]:grid"
         style={{
@@ -159,7 +166,7 @@ export function CandidateRoom({
           orientation="vertical"
           onPointerDown={(event) => {
             const initial = sideWidth;
-            beginResize(event, (dx) => setSideWidth(clampPanelWidth(initial - dx, 560)));
+            beginResize(event, (dx) => setSideWidth(clampPanelWidth(initial - dx, 520)));
           }}
         />
         <aside className="min-h-0 min-w-0 overflow-hidden">
@@ -175,7 +182,7 @@ export function CandidateRoom({
         </aside>
       </div>
 
-      <div className="grid min-h-0 min-w-0 grid-cols-1 gap-5 min-[901px]:hidden">
+      <div className="grid min-h-0 min-w-0 grid-cols-1 gap-4 min-[901px]:hidden">
         <section className="min-h-[70vh] min-w-0">
           <WorkspacePanel
             ready={session.workspace.ready}
@@ -184,7 +191,7 @@ export function CandidateRoom({
             onReload={onReloadWorkspace}
           />
         </section>
-        <aside className="flex min-h-0 min-w-0 flex-col gap-5 overflow-auto">
+        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto">
           <ZoomPanel session={session} {...zoomProps} />
           <ChatPanel messages={messages} status={chatStatus} onSend={onSendMessage} />
         </aside>
@@ -204,12 +211,12 @@ export function InterviewerRoom({
   onSendMessage,
   zoomProps,
 }) {
-  const [leftWidth, setLeftWidth] = useState(360);
-  const [rightWidth, setRightWidth] = useState(390);
-  const [candidateShare, setCandidateShare] = useState(42);
+  const [leftWidth, setLeftWidth] = useState(340);
+  const [rightWidth, setRightWidth] = useState(372);
+  const [candidateShare, setCandidateShare] = useState(40);
 
   return (
-    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-4 pb-4 max-[900px]:overflow-auto">
+    <main className="mx-auto min-h-0 w-full max-w-[1800px] overflow-hidden px-3 pb-3 max-[900px]:overflow-auto max-[900px]:px-4 max-[900px]:pb-4">
       <div
         className="hidden h-full min-h-0 min-w-0 min-[1181px]:grid"
         style={{
@@ -230,7 +237,7 @@ export function InterviewerRoom({
           orientation="vertical"
           onPointerDown={(event) => {
             const initial = leftWidth;
-            beginResize(event, (dx) => setLeftWidth(clampPanelWidth(initial + dx, 520)));
+            beginResize(event, (dx) => setLeftWidth(clampPanelWidth(initial + dx, 500)));
           }}
         />
         <section className="min-h-0 min-w-0 overflow-hidden">
@@ -240,7 +247,7 @@ export function InterviewerRoom({
           orientation="vertical"
           onPointerDown={(event) => {
             const initial = rightWidth;
-            beginResize(event, (dx) => setRightWidth(clampPanelWidth(initial - dx, 560)));
+            beginResize(event, (dx) => setRightWidth(clampPanelWidth(initial - dx, 520)));
           }}
         />
         <aside className="min-h-0 min-w-0 overflow-hidden">
@@ -248,8 +255,8 @@ export function InterviewerRoom({
         </aside>
       </div>
 
-      <div className="grid min-h-0 min-w-0 grid-cols-[minmax(19rem,24rem)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(20rem,34vh)] gap-5 min-[1181px]:hidden max-[900px]:grid-cols-1 max-[900px]:grid-rows-none">
-        <aside className="flex min-h-0 min-w-0 flex-col gap-5 overflow-auto max-[900px]:row-auto">
+      <div className="grid min-h-0 min-w-0 grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(19rem,34vh)] gap-4 min-[1181px]:hidden max-[900px]:grid-cols-1 max-[900px]:grid-rows-none">
+        <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto max-[900px]:row-auto">
           <CandidatePanel session={session} onAdmit={onAdmit} admitting={admitting} />
           <ZoomPanel session={session} {...zoomProps} />
         </aside>

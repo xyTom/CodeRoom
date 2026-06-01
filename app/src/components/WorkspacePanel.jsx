@@ -1,38 +1,55 @@
 import { Monitor, RefreshCw } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function WorkspacePanel({ ready, available, title = "Workspace", revision, onReload }) {
   const showFrame = ready && available;
   const src = showFrame ? `/ide/?reload=${revision}` : "about:blank";
-  const emptyTitle = available ? "Workspace starting" : "Waiting for approval";
+  const emptyTitle = available ? "Workspace is warming up" : "Approval required";
+  const emptyDescription = available
+    ? "code-server will appear here as soon as the interview workspace is ready."
+    : "The candidate workspace opens after the interviewer admits the candidate.";
+  const status = showFrame ? "ready" : available ? "starting" : "locked";
 
   return (
-    <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
-      <CardHeader>
+    <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] shadow-sm">
+      <CardHeader className="border-b">
         <CardTitle>{title}</CardTitle>
+        <CardDescription>Shared coding environment</CardDescription>
         <CardAction>
-          <Button variant="outline" size="icon-sm" type="button" onClick={onReload} disabled={!showFrame}>
-            <RefreshCw />
-            <span className="sr-only">Reload workspace</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Badge variant={showFrame ? "secondary" : "outline"}>{status}</Badge>
+            <Button variant="outline" size="icon-sm" type="button" onClick={onReload} disabled={!showFrame}>
+              <RefreshCw />
+              <span className="sr-only">Reload workspace</span>
+            </Button>
+          </div>
         </CardAction>
       </CardHeader>
-      <CardContent className="min-h-0 overflow-hidden p-0">
+      <CardContent className="min-h-0 overflow-hidden bg-background p-0">
         {!showFrame && (
-          <Empty className="h-full">
+          <Empty className="h-full border-0 p-6">
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <Monitor />
               </EmptyMedia>
               <EmptyTitle>{emptyTitle}</EmptyTitle>
-              {available ? <EmptyDescription>code-server will open here when it is ready.</EmptyDescription> : null}
+              <EmptyDescription>{emptyDescription}</EmptyDescription>
             </EmptyHeader>
+            {available ? (
+              <div className="flex w-full max-w-sm flex-col gap-2">
+                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-4/5" />
+              </div>
+            ) : null}
           </Empty>
         )}
-        {showFrame && <iframe className="h-full w-full border-0 bg-card" key={revision} src={src} title="Interview workspace" />}
+        {showFrame && <iframe className="h-full w-full border-0 bg-background" key={revision} src={src} title="Interview workspace" />}
       </CardContent>
     </Card>
   );

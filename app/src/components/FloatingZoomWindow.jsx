@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Grip, Maximize2, Minimize2, PhoneOff, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "coderoom:zoom-window:v2";
@@ -148,22 +149,26 @@ export function FloatingZoomWindow({ visible, loading, joined, mounted, containe
   return (
     <Card
       className={cn(
-        "fixed z-[60] grid gap-0 overflow-hidden p-0 shadow-xl",
-        expanded ? "grid-rows-[3rem_minmax(0,1fr)]" : "grid-rows-[3rem_minmax(0,1fr)]",
+        "fixed z-[60] grid grid-rows-[3.25rem_minmax(0,1fr)] gap-0 overflow-hidden rounded-3xl border bg-card p-0 shadow-2xl ring-1 ring-foreground/10",
+        expanded ? "max-[700px]:grid-rows-[3.75rem_minmax(0,1fr)]" : "",
       )}
       style={visible ? style : { ...style, display: "none" }}
     >
-      <CardHeader className="grid-cols-[1fr_auto] cursor-move select-none border-b px-4 py-2" onPointerDown={startDrag}>
-        <div className="min-w-0">
-          <strong className="block truncate text-sm">{joined ? "Zoom session" : loading ? "Starting Zoom" : "Zoom"}</strong>
-          <span className="block truncate text-xs text-muted-foreground">
-            {expanded ? "Expanded view" : "Floating view"}
-          </span>
+      <CardHeader
+        className="grid-cols-[minmax(0,1fr)_auto] cursor-move select-none border-b bg-card/95 px-3 py-2"
+        onPointerDown={startDrag}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn("size-2 shrink-0 rounded-full", joined ? "bg-primary" : loading ? "bg-muted-foreground" : "bg-muted")} />
+          <div className="min-w-0">
+            <CardTitle className="truncate text-sm">{joined ? "Zoom meeting" : loading ? "Starting Zoom" : "Zoom meeting"}</CardTitle>
+            <CardDescription className="truncate text-xs">{expanded ? "Expanded meeting view" : "Floating meeting window"}</CardDescription>
+          </div>
         </div>
         <div className="flex items-center gap-1" onPointerDown={(event) => event.stopPropagation()}>
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             type="button"
             title={expanded ? "Restore Zoom" : "Expand Zoom"}
             aria-label={expanded ? "Restore Zoom" : "Expand Zoom"}
@@ -172,11 +177,11 @@ export function FloatingZoomWindow({ visible, loading, joined, mounted, containe
             {expanded ? <Minimize2 data-icon="inline-start" /> : <Maximize2 data-icon="inline-start" />}
           </Button>
           {joined ? (
-            <Button variant="destructive" size="icon" type="button" title="Leave Zoom" aria-label="Leave Zoom" onClick={onLeave}>
+            <Button variant="destructive" size="icon-sm" type="button" title="Leave Zoom" aria-label="Leave Zoom" onClick={onLeave}>
               <PhoneOff data-icon="inline-start" />
             </Button>
           ) : null}
-          <Button variant="ghost" size="icon" type="button" title="Hide Zoom" aria-label="Hide Zoom" onClick={onClose}>
+          <Button variant="ghost" size="icon-sm" type="button" title="Hide Zoom" aria-label="Hide Zoom" onClick={onClose}>
             <X data-icon="inline-start" />
           </Button>
         </div>
@@ -184,12 +189,20 @@ export function FloatingZoomWindow({ visible, loading, joined, mounted, containe
       <CardContent className="relative min-h-0 overflow-hidden p-0">
         <div className="h-full w-full bg-muted" ref={containerRef} />
         {loading && !joined ? (
-          <div className="absolute inset-0 grid place-items-center bg-muted text-sm text-muted-foreground">Loading Zoom...</div>
+          <div className="absolute inset-0 grid place-items-center bg-muted/95 text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-3 rounded-3xl border bg-card px-6 py-5 shadow-sm">
+              <Spinner />
+              <div className="text-center">
+                <div className="font-medium text-foreground">Preparing the meeting</div>
+                <div className="text-xs text-muted-foreground">Connecting to Zoom Video SDK...</div>
+              </div>
+            </div>
+          </div>
         ) : null}
       </CardContent>
       {!expanded ? (
         <div
-          className="absolute bottom-0 right-0 grid size-7 cursor-nwse-resize place-items-center text-muted-foreground"
+          className="absolute bottom-1 right-1 grid size-7 cursor-nwse-resize place-items-center rounded-2xl bg-card/80 text-muted-foreground shadow-sm ring-1 ring-border"
           title="Resize Zoom"
           onPointerDown={startResize}
         >

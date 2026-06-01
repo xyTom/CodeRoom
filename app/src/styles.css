@@ -169,15 +169,34 @@
   }
 
   .zoom-native-root {
-    @apply grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-card text-card-foreground;
+    @apply grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-zinc-950 text-white;
   }
 
   .zoom-native-stage {
-    @apply relative min-h-0 overflow-hidden bg-muted;
+    @apply relative min-h-0 overflow-hidden bg-zinc-950;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.08), transparent 28rem),
+      linear-gradient(180deg, rgb(24 24 27), rgb(9 9 11));
   }
 
   .zoom-native-empty {
-    @apply absolute inset-0 grid place-items-center px-4 text-center text-sm text-muted-foreground;
+    @apply absolute inset-0 grid place-items-center px-4 text-center;
+  }
+
+  .zoom-native-empty-card {
+    @apply flex max-w-sm flex-col items-center gap-2 rounded-3xl border border-white/10 bg-white/5 px-6 py-5 text-white shadow-2xl backdrop-blur;
+  }
+
+  .zoom-native-empty-icon {
+    @apply mb-1 size-8 text-white/70;
+  }
+
+  .zoom-native-empty-title {
+    @apply text-sm font-medium;
+  }
+
+  .zoom-native-empty-description {
+    @apply text-xs leading-5 text-white/60;
   }
 
   .zoom-native-share-stage {
@@ -187,6 +206,7 @@
   .zoom-native-share-stage[hidden],
   .zoom-native-video-grid[hidden],
   .zoom-native-share-media[hidden],
+  .zoom-native-share-control-bar[hidden],
   .zoom-native-remote-share[hidden] {
     display: none !important;
   }
@@ -217,46 +237,104 @@
   }
 
   .zoom-native-share-hint {
-    @apply absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-md bg-zinc-950/70 px-2 py-1 text-xs text-white shadow-sm;
+    @apply absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full border border-white/10 bg-zinc-950/75 px-3 py-1 text-xs text-white shadow-lg backdrop-blur;
+  }
+
+  .zoom-native-share-control-bar {
+    @apply absolute left-1/2 bottom-4 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-zinc-950/85 px-2 py-1 text-white shadow-2xl backdrop-blur;
+  }
+
+  .zoom-native-share-control-text {
+    @apply max-w-36 truncate px-2 text-xs font-medium;
+  }
+
+  .zoom-native-share-control-button {
+    @apply inline-flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/10 p-0 text-white transition-colors hover:bg-white/20;
+  }
+
+  .zoom-native-share-control-stop {
+    @apply border-destructive/30 bg-destructive text-destructive-foreground hover:bg-destructive/90;
   }
 
   .zoom-native-video-grid {
-    @apply absolute inset-0 grid h-full w-full min-w-0 auto-rows-fr grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] place-items-center gap-3 overflow-hidden p-3;
+    @apply absolute inset-0 grid h-full w-full min-w-0 auto-rows-fr place-items-center gap-3 overflow-hidden p-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    align-content: center;
+    justify-content: center;
+  }
+
+  .zoom-native-video-grid[data-count="1"] {
+    grid-template-columns: minmax(0, min(64rem, 100%));
+  }
+
+  .zoom-native-video-grid[data-count="1"] .zoom-native-video-tile {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    max-height: 100%;
   }
 
   .zoom-native-video-tile {
-    @apply relative h-full w-full min-w-0 overflow-hidden rounded-md bg-zinc-950;
+    @apply relative h-full w-full min-w-0 overflow-hidden rounded-3xl bg-zinc-900 shadow-2xl ring-1 ring-white/10;
   }
 
   .zoom-native-video-tile-active {
-    @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-zinc-950;
   }
 
   .zoom-native-video-player {
     @apply block h-full w-full;
+    object-fit: contain;
+  }
+
+  .zoom-native-video-meta {
+    @apply absolute bottom-3 left-3 right-3 flex min-w-0 items-center justify-between gap-2;
   }
 
   .zoom-native-video-name {
-    @apply absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate rounded bg-zinc-950/70 px-2 py-0.5 text-xs text-white;
+    @apply min-w-0 truncate rounded-full border border-white/10 bg-zinc-950/75 px-3 py-1 text-xs font-medium text-white shadow-lg backdrop-blur;
+  }
+
+  .zoom-native-video-status {
+    @apply hidden shrink-0 rounded-full bg-primary px-2 py-1 text-xs font-medium text-primary-foreground shadow-lg;
+  }
+
+  .zoom-native-video-tile-active .zoom-native-video-status {
+    @apply inline-flex;
   }
 
   .zoom-native-controls {
-    @apply flex min-h-12 items-center justify-between gap-2 border-t bg-card px-3 py-2;
+    @apply grid min-h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-t border-white/10 bg-zinc-950/95 px-3 py-2;
   }
 
   .zoom-native-status {
-    @apply min-w-0 truncate text-xs text-muted-foreground;
+    @apply min-w-0 truncate text-xs text-white/60;
   }
 
   .zoom-native-button-row {
-    @apply flex shrink-0 flex-wrap items-center justify-end gap-2;
+    @apply col-start-2 flex shrink-0 items-center justify-center gap-2;
   }
 
   .zoom-native-button {
-    @apply inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/10 p-0 text-white shadow-sm transition-colors hover:bg-white/20 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .zoom-native-button-icon {
+    @apply size-4 shrink-0;
+  }
+
+  .zoom-native-button-label {
+    @apply sr-only;
+  }
+
+  .zoom-native-button[data-state="active"] {
+    @apply border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground;
+  }
+
+  .zoom-native-button[data-state="muted"] {
+    @apply text-white/50;
   }
 
   .zoom-native-button-danger {
-    @apply border-destructive/30 bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground;
+    @apply ml-2 border-destructive/40 bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground;
   }
 }
