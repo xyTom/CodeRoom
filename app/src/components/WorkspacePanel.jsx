@@ -15,7 +15,7 @@ export function WorkspacePanel({ ready, available, title = "Workspace", revision
     : "The candidate workspace opens after the interviewer admits the candidate.";
 
   return (
-    <Card variant="panel" size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] shadow-sm">
+    <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] shadow-sm">
       <CardHeader className="border-b">
         <CardTitle>{title}</CardTitle>
         <CardAction>
