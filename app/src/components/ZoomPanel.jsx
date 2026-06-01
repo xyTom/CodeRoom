@@ -1,9 +1,8 @@
 import { UserPlus, Video } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +29,6 @@ export function ZoomPanel({
     <Card size="sm" className={cn("shadow-sm", fill ? "grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]" : "shrink-0")}>
       <CardHeader className="border-b">
         <CardTitle>Video room</CardTitle>
-        <CardAction>
-          <Badge variant={enabled ? "secondary" : "outline"}>{enabled ? "enabled" : "offline"}</Badge>
-        </CardAction>
       </CardHeader>
       {showNotice ? (
         <CardContent className="flex min-h-0 flex-col justify-center">

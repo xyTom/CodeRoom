@@ -1,9 +1,8 @@
 import { CircleCheck, Clock, UserPlus, Users } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
@@ -12,14 +11,12 @@ export function CandidatePanel({ session, onAdmit, admitting, fill = false }) {
   let status = "No candidate waiting yet.";
   let buttonText = "Waiting";
   let disabled = true;
-  let statusLabel = "idle";
   let StatusIcon = Users;
 
   if (room?.candidateAdmitted) {
     const names = room.candidateNames.length ? room.candidateNames.join(", ") : "Candidate";
     status = `${names} admitted. The workspace link is active for both sides.`;
     buttonText = "Admitted";
-    statusLabel = "admitted";
     StatusIcon = CircleCheck;
   } else if (room?.candidateWaiting) {
     const seen = room.candidateLastSeen
@@ -29,7 +26,6 @@ export function CandidatePanel({ session, onAdmit, admitting, fill = false }) {
     status = `${names} waiting${seen ? ` since ${seen}` : ""}.`;
     buttonText = admitting ? "Admitting..." : "Admit candidate";
     disabled = admitting;
-    statusLabel = "waiting";
     StatusIcon = Clock;
   }
 
@@ -37,9 +33,6 @@ export function CandidatePanel({ session, onAdmit, admitting, fill = false }) {
     <Card size="sm" className={cn("shadow-sm", fill ? "grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]" : "shrink-0")}>
       <CardHeader className="border-b">
         <CardTitle>Candidate</CardTitle>
-        <CardAction>
-          <Badge variant={statusLabel === "admitted" ? "secondary" : "outline"}>{statusLabel}</Badge>
-        </CardAction>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-col justify-center">
         <Alert>
