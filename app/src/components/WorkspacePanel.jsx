@@ -2,27 +2,25 @@ import { Monitor, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function WorkspacePanel({ ready, available, title = "Workspace", revision, onReload }) {
   const showFrame = ready && available;
   const src = showFrame ? `/ide/?reload=${revision}` : "about:blank";
-  const emptyTitle = available ? "Workspace is warming up" : "Approval required";
+  const emptyTitle = available ? "Workspace is warming up" : "Waiting for approval";
   const emptyDescription = available
     ? "code-server will appear here as soon as the interview workspace is ready."
     : "The candidate workspace opens after the interviewer admits the candidate.";
-  const status = showFrame ? "ready" : available ? "starting" : "locked";
 
   return (
     <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] shadow-sm">
       <CardHeader className="border-b">
         <CardTitle>{title}</CardTitle>
-        <CardDescription>Shared coding environment</CardDescription>
         <CardAction>
           <div className="flex items-center gap-2">
-            <Badge variant={showFrame ? "secondary" : "outline"}>{status}</Badge>
+            {available ? <Badge variant={showFrame ? "secondary" : "outline"}>{showFrame ? "ready" : "starting"}</Badge> : null}
             <Button variant="outline" size="icon-sm" type="button" onClick={onReload} disabled={!showFrame}>
               <RefreshCw />
               <span className="sr-only">Reload workspace</span>

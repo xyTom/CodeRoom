@@ -143,7 +143,7 @@ export function CandidateRoom({
   onSendMessage,
   zoomProps,
 }) {
-  const [sideWidth, setSideWidth] = useState(372);
+  const [sideWidth, setSideWidth] = useState(344);
   const [zoomShare, setZoomShare] = useState(38);
 
   return (
@@ -211,8 +211,8 @@ export function InterviewerRoom({
   onSendMessage,
   zoomProps,
 }) {
-  const [leftWidth, setLeftWidth] = useState(340);
-  const [rightWidth, setRightWidth] = useState(372);
+  const [leftWidth, setLeftWidth] = useState(316);
+  const [rightWidth, setRightWidth] = useState(344);
   const [candidateShare, setCandidateShare] = useState(40);
 
   return (

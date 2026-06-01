@@ -245,7 +245,10 @@ export function App() {
           scheduleZoomCleanup(0);
         },
         onError: (error) => {
-          setZoomError(`Zoom error: ${error.message}`);
+          const detail = error?.message || error?.reason;
+          if (detail) {
+            setZoomError(`Zoom error: ${detail}`);
+          }
         },
       });
 

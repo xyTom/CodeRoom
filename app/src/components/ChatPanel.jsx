@@ -3,7 +3,7 @@ import { MessageCircle, Send } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -34,10 +34,9 @@ export function ChatPanel({ messages, status, onSend }) {
   }
 
   return (
-    <Card size="sm" className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] shadow-sm">
+    <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] shadow-sm">
       <CardHeader className="border-b">
         <CardTitle>Chat</CardTitle>
-        <CardDescription>{messages.length} message{messages.length === 1 ? "" : "s"}</CardDescription>
         <CardAction>
           <Badge variant={statusVariant}>{status}</Badge>
         </CardAction>

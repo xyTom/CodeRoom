@@ -1,39 +1,49 @@
-import { Clock, TerminalSquare } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 export function CandidateLobby({ session }) {
   const admitted = Boolean(session?.room?.candidateAdmitted);
+  const name = session?.name?.trim();
 
   return (
     <main className="grid min-h-0 place-items-center bg-muted p-5">
-      <Card size="sm" className="w-full max-w-xl shadow-sm">
-        <CardHeader className="border-b">
-          <CardTitle>Waiting room</CardTitle>
-          <CardDescription>{session?.sessionName || "Interview room"}</CardDescription>
-          <CardAction>
-            <Badge variant="outline">candidate</Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 rounded-2xl bg-muted/60 p-3">
-            <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
-              <TerminalSquare />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-medium">CodeRoom is ready</div>
-              <div className="text-xs text-muted-foreground">Keep this tab open while the interviewer admits you.</div>
-            </div>
+      <Card size="sm" className="w-full max-w-md shadow-sm">
+        <CardContent className="flex flex-col items-center gap-5 px-6 py-10 text-center">
+          <div
+            className={cn(
+              "relative grid size-16 place-items-center rounded-full",
+              admitted ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+            )}
+          >
+            {admitted ? null : <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />}
+            {admitted ? <CheckCircle2 className="relative size-7" /> : <Clock className="relative size-7" />}
           </div>
-          <Alert>
-            <Clock />
-            <AlertTitle>{admitted ? "Approved" : "Waiting for approval"}</AlertTitle>
-            <AlertDescription>
-              {admitted ? "Opening the shared workspace now..." : "The interviewer will let you in when they are ready."}
-            </AlertDescription>
-          </Alert>
+
+          <div className="flex flex-col gap-2">
+            <h1 className="font-heading text-xl font-medium text-foreground">
+              {admitted ? "You're in" : "Waiting for approval"}
+            </h1>
+            <p className="text-pretty text-sm leading-6 text-muted-foreground">
+              {admitted
+                ? "Opening the shared workspace for you now."
+                : `Hang tight${name ? `, ${name}` : ""}. Your interviewer will let you in shortly — keep this tab open and you'll join automatically.`}
+            </p>
+          </div>
+
+          {admitted ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Spinner />
+              <span>Loading workspace…</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span className="size-2 rounded-full bg-primary" />
+              Connected
+            </div>
+          )}
         </CardContent>
       </Card>
     </main>
