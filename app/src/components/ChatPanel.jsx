@@ -34,7 +34,7 @@ export function ChatPanel({ messages, status, onSend }) {
   }
 
   return (
-    <Card size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] shadow-sm">
+    <Card variant="panel" size="sm" className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] shadow-sm">
       <CardHeader className="border-b">
         <CardTitle>Chat</CardTitle>
         <CardAction>
