@@ -9,6 +9,7 @@ import {
   subscribeRoomEvents,
 } from "./api.js";
 import { CandidateLobby } from "./components/CandidateLobby.jsx";
+import { BrandMark } from "./components/BrandMark.jsx";
 import { FloatingZoomWindow } from "./components/FloatingZoomWindow.jsx";
 import { CandidateRoom, InterviewerRoom } from "./components/RoomLayouts.jsx";
 import { Topbar } from "./components/Topbar.jsx";
@@ -306,9 +307,7 @@ export function App() {
   if (!session) {
     return (
       <div className="flex min-h-full items-center justify-center gap-3 bg-muted text-muted-foreground">
-        <div className="grid size-10 place-items-center rounded-2xl bg-primary text-sm font-medium text-primary-foreground">
-          CR
-        </div>
+        <BrandMark className="size-10" />
         <Spinner />
         <span>Loading room...</span>
       </div>

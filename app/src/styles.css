@@ -132,7 +132,7 @@
   }
 
   .brand-mark {
-    @apply grid size-10 shrink-0 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground shadow-sm;
+    @apply grid size-10 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm;
   }
 
   .brand-mark svg {

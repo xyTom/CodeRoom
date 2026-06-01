@@ -638,6 +638,16 @@ function proxyIdeUpgrade(req, socket, head) {
   });
 }
 
+function renderBrandMark() {
+  return `<div class="brand-mark" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="m7 8 3 3-3 3" />
+      <path d="M12 16h5" />
+    </svg>
+  </div>`;
+}
+
 function renderLogin(message = "") {
   return `<!doctype html>
 <html lang="en">
@@ -650,7 +660,7 @@ function renderLogin(message = "") {
 <body class="login-body">
   <main class="login-panel">
     <div class="brand-row">
-      <div class="brand-mark">CR</div>
+      ${renderBrandMark()}
       <div>
         <h1>CodeRoom</h1>
         <p>Temporary interview room</p>
@@ -689,7 +699,7 @@ function renderNamePrompt(session, message = "") {
 <body class="login-body">
   <main class="login-panel">
     <div class="brand-row">
-      <div class="brand-mark">CR</div>
+      ${renderBrandMark()}
       <div>
         <h1>CodeRoom</h1>
         <p>${escapeHtml(roleLabel)} profile</p>

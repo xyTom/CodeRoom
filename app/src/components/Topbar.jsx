@@ -1,6 +1,7 @@
-import { LogOut, TerminalSquare } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 
 export function Topbar({ session }) {
@@ -10,9 +11,7 @@ export function Topbar({ session }) {
     <header className="relative z-20 border-b bg-background/95 px-4 py-2.5 text-foreground shadow-sm">
       <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-3 max-[900px]:items-start max-[900px]:flex-col">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid size-9 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <TerminalSquare />
-          </div>
+          <BrandMark />
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight">CodeRoom</h1>
             <p className="truncate text-xs text-muted-foreground">{session?.sessionName || "Loading interview room..."}</p>
