@@ -22,6 +22,7 @@ const ZOOM_VIDEO_SDK_SECRET = process.env.ZOOM_VIDEO_SDK_SECRET || "";
 const ZOOM_SESSION_NAME = process.env.ZOOM_SESSION_NAME || SESSION_NAME;
 const ZOOM_SESSION_PASSCODE = process.env.ZOOM_SESSION_PASSCODE || "";
 const ZOOM_UI_TOOLKIT_VERSION = process.env.ZOOM_UI_TOOLKIT_VERSION || "2.4.0-1";
+const ZOOM_VIDEO_SDK_VERSION = process.env.ZOOM_VIDEO_SDK_VERSION || ZOOM_UI_TOOLKIT_VERSION.replace(/-.*/, "");
 
 const COOKIE_NAME = "coderoom_token";
 const NAME_COOKIE_NAME = "coderoom_name";
@@ -900,6 +901,7 @@ async function handleRequest(req, res) {
       sessionName: ZOOM_SESSION_NAME,
       sessionPasscode: ZOOM_SESSION_PASSCODE,
       uiToolkitVersion: ZOOM_UI_TOOLKIT_VERSION,
+      videoSdkVersion: ZOOM_VIDEO_SDK_VERSION,
       userName: session.name || (session.role === "interviewer" ? "Interviewer" : "Candidate"),
     });
     return;

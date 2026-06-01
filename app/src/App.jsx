@@ -14,7 +14,7 @@ import { CandidateRoom, InterviewerRoom } from "./components/RoomLayouts.jsx";
 import { Topbar } from "./components/Topbar.jsx";
 import { ZoomInviteBanner } from "./components/ZoomInviteBanner.jsx";
 import { Spinner } from "@/components/ui/spinner";
-import { loadZoomToolkit } from "./zoomToolkit.js";
+import { startNativeZoomSession } from "./nativeZoomSession.js";
 
 function canJoinZoom(session) {
   if (!session?.zoom?.enabled) {
@@ -62,8 +62,7 @@ export function App() {
   const [zoomMounted, setZoomMounted] = useState(false);
   const [zoomError, setZoomError] = useState("");
   const zoomContainerRef = useRef(null);
-  const zoomToolkitRef = useRef(null);
-  const zoomCallbacksRef = useRef(null);
+  const zoomControllerRef = useRef(null);
   const zoomCleanupTimerRef = useRef(null);
   const zoomDestroyedRef = useRef(false);
   const zoomSessionEndingRef = useRef(false);
@@ -75,37 +74,14 @@ export function App() {
     }
   }, []);
 
-  const detachZoomListeners = useCallback((uitoolkit = zoomToolkitRef.current) => {
-    const callbacks = zoomCallbacksRef.current;
-    if (!uitoolkit || !callbacks) {
+  const destroyZoomController = useCallback((controller = zoomControllerRef.current) => {
+    if (!controller || zoomDestroyedRef.current) {
       return;
     }
 
     try {
-      if (callbacks.sessionJoined && typeof uitoolkit.offSessionJoined === "function") {
-        uitoolkit.offSessionJoined(callbacks.sessionJoined);
-      }
-      if (callbacks.sessionClosed && typeof uitoolkit.offSessionClosed === "function") {
-        uitoolkit.offSessionClosed(callbacks.sessionClosed);
-      }
-      if (callbacks.sessionDestroyed && typeof uitoolkit.offSessionDestroyed === "function") {
-        uitoolkit.offSessionDestroyed(callbacks.sessionDestroyed);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      zoomCallbacksRef.current = null;
-    }
-  }, []);
-
-  const destroyZoomToolkit = useCallback((uitoolkit = zoomToolkitRef.current) => {
-    if (!uitoolkit || zoomDestroyedRef.current) {
-      return;
-    }
-
-    try {
-      if (typeof uitoolkit.destroy === "function") {
-        uitoolkit.destroy();
+      if (typeof controller.destroy === "function") {
+        controller.destroy();
       }
     } catch (error) {
       console.error(error);
@@ -116,12 +92,11 @@ export function App() {
 
   const finishZoomCleanup = useCallback(() => {
     clearZoomCleanupTimer();
-    const uitoolkit = zoomToolkitRef.current;
+    const controller = zoomControllerRef.current;
     const container = zoomContainerRef.current;
 
-    detachZoomListeners(uitoolkit);
-    destroyZoomToolkit(uitoolkit);
-    zoomToolkitRef.current = null;
+    destroyZoomController(controller);
+    zoomControllerRef.current = null;
     zoomSessionEndingRef.current = false;
 
     setZoomJoined(false);
@@ -134,7 +109,7 @@ export function App() {
       }
       setZoomMounted(false);
     });
-  }, [clearZoomCleanupTimer, destroyZoomToolkit, detachZoomListeners]);
+  }, [clearZoomCleanupTimer, destroyZoomController]);
 
   const scheduleZoomCleanup = useCallback(
     (delay = 1600) => {
@@ -185,10 +160,9 @@ export function App() {
   useEffect(
     () => () => {
       clearZoomCleanupTimer();
-      detachZoomListeners();
-      destroyZoomToolkit();
+      destroyZoomController();
     },
-    [clearZoomCleanupTimer, destroyZoomToolkit, detachZoomListeners],
+    [clearZoomCleanupTimer, destroyZoomController],
   );
 
   async function handleSendMessage(text) {
@@ -249,62 +223,34 @@ export function App() {
     await waitForPaint();
 
     try {
-      const zoom = await getZoomSession();
-      const uitoolkit = await loadZoomToolkit(zoom.uiToolkitVersion);
       const container = zoomContainerRef.current;
 
-      if (!uitoolkit || !container) {
-        throw new Error("Zoom UI Toolkit did not load");
+      if (!container) {
+        throw new Error("Zoom container did not mount");
       }
 
+      const zoom = await getZoomSession();
       clearZoomCleanupTimer();
-      detachZoomListeners(uitoolkit);
-      zoomToolkitRef.current = uitoolkit;
       zoomDestroyedRef.current = false;
       zoomSessionEndingRef.current = false;
       container.replaceChildren();
 
-      const sessionJoined = () => {
-        setZoomJoined(true);
-        setZoomLoading(false);
-        setZoomVisible(true);
-      };
-      const sessionClosed = () => {
-        scheduleZoomCleanup();
-      };
-      const sessionDestroyed = () => {
-        finishZoomCleanup();
-      };
-
-      uitoolkit.joinSession(container, {
-        videoSDKJWT: zoom.videoSDKJWT,
-        sessionName: zoom.sessionName,
-        userName: zoom.userName,
-        sessionPasscode: zoom.sessionPasscode,
-        featuresOptions: {
-          video: { enable: true },
-          audio: { enable: true },
-          share: { enable: true },
-          chat: { enable: true },
-          users: { enable: true },
-          settings: { enable: true },
-          leave: { enable: true },
-          feedback: { enable: false },
+      const controller = await startNativeZoomSession(container, zoom, {
+        onJoined: () => {
+          setZoomJoined(true);
+          setZoomLoading(false);
+          setZoomVisible(true);
+        },
+        onClosed: () => {
+          scheduleZoomCleanup(0);
+        },
+        onError: (error) => {
+          setZoomError(`Zoom error: ${error.message}`);
         },
       });
 
+      zoomControllerRef.current = controller;
       setZoomJoined(true);
-
-      zoomCallbacksRef.current = { sessionJoined, sessionClosed, sessionDestroyed };
-      if (typeof uitoolkit.onSessionJoined === "function") {
-        uitoolkit.onSessionJoined(sessionJoined);
-      }
-      if (typeof uitoolkit.onSessionClosed === "function") {
-        uitoolkit.onSessionClosed(sessionClosed);
-      }
-      if (typeof uitoolkit.onSessionDestroyed === "function") {
-        uitoolkit.onSessionDestroyed(sessionDestroyed);
-      }
     } catch (error) {
       console.error(error);
       setZoomError(`Could not start Zoom: ${error.message}`);
@@ -315,7 +261,7 @@ export function App() {
   }
 
   async function handleLeaveZoom() {
-    const uitoolkit = zoomToolkitRef.current;
+    const controller = zoomControllerRef.current;
     const container = zoomContainerRef.current;
 
     zoomSessionEndingRef.current = true;
@@ -323,14 +269,14 @@ export function App() {
     setZoomLoading(false);
     setZoomVisible(false);
 
-    if (!uitoolkit || !container) {
+    if (!controller || !container) {
       finishZoomCleanup();
       return;
     }
 
     try {
-      if (uitoolkit && typeof uitoolkit.closeSession === "function") {
-        await uitoolkit.closeSession(container);
+      if (controller && typeof controller.closeSession === "function") {
+        await controller.closeSession(container);
         scheduleZoomCleanup();
         return;
       }

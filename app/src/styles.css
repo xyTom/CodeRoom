@@ -168,56 +168,68 @@
     @apply mt-4 rounded-md border border-destructive/40 bg-background px-3 py-2 text-sm text-destructive;
   }
 
-  .zoom-ui-toolkit-root,
-  .zoom-ui-toolkit-root > *,
-  .zoom-ui-toolkit-root #uikit-container-app,
-  .zoom-ui-toolkit-root #uikit-container-app > * {
-    min-width: 0 !important;
-    min-height: 0 !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
+  .zoom-native-root {
+    @apply grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-card text-card-foreground;
+  }
+
+  .zoom-native-stage {
+    @apply relative min-h-0 overflow-hidden bg-muted;
+  }
+
+  .zoom-native-empty {
+    @apply absolute inset-0 grid place-items-center px-4 text-center text-sm text-muted-foreground;
+  }
+
+  .zoom-native-share-stage {
+    @apply absolute inset-0 min-h-0 overflow-hidden bg-zinc-950;
+  }
+
+  .zoom-native-share-stage[hidden],
+  .zoom-native-video-grid[hidden],
+  .zoom-native-share-media[hidden],
+  .zoom-native-remote-share[hidden] {
+    display: none !important;
+  }
+
+  .zoom-native-share-media,
+  .zoom-native-remote-share,
+  .zoom-native-remote-share > *,
+  .zoom-native-remote-share video-player,
+  .zoom-native-remote-share video-player-container,
+  .zoom-native-remote-share canvas,
+  .zoom-native-remote-share video {
     width: 100% !important;
-  }
-
-  .zoom-ui-toolkit-root #uikit-container-app,
-  .zoom-ui-toolkit-root #uikit-container-app > * {
     height: 100% !important;
-  }
-
-  .zoom-ui-toolkit-root .uikit-main-content {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .zoom-ui-toolkit-root video-player-container,
-  .zoom-ui-toolkit-root video-player {
-    max-width: 100% !important;
-    max-height: 100% !important;
-  }
-
-  .zoom-ui-toolkit-root .uikit-main-content [style*="max-width"] {
-    max-width: 100% !important;
-  }
-
-  .zoom-ui-toolkit-root .uikit-main-content video,
-  .zoom-ui-toolkit-root .uikit-main-content canvas {
     max-width: 100% !important;
     max-height: 100% !important;
     object-fit: contain !important;
   }
 
-  .zoom-ui-toolkit-root #ZOOM_VIDEO_SDK_SELF_SHARE_CANVAS,
-  .zoom-ui-toolkit-root #ZOOM_VIDEO_SDK_SHARE_CANVAS,
-  .zoom-ui-toolkit-root canvas[id*="SHARE"],
-  .zoom-ui-toolkit-root #uikit-whiteboard-container,
-  .zoom-ui-toolkit-root #uikit-whiteboard-container-inner {
-    min-width: 0 !important;
-    min-height: 0 !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    object-fit: contain !important;
+  .zoom-native-video-grid {
+    @apply absolute inset-0 grid h-full w-full min-w-0 place-items-center overflow-hidden p-3;
+  }
+
+  .zoom-native-video-tile {
+    @apply h-full w-full min-w-0 overflow-hidden rounded-md bg-zinc-950;
+  }
+
+  .zoom-native-controls {
+    @apply flex min-h-12 items-center justify-between gap-2 border-t bg-card px-3 py-2;
+  }
+
+  .zoom-native-status {
+    @apply min-w-0 truncate text-xs text-muted-foreground;
+  }
+
+  .zoom-native-button-row {
+    @apply flex shrink-0 flex-wrap items-center justify-end gap-2;
+  }
+
+  .zoom-native-button {
+    @apply inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .zoom-native-button-danger {
+    @apply border-destructive/30 bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground;
   }
 }
